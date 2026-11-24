@@ -66,13 +66,16 @@ $assetRecords = @(
 )
 $manifest = [ordered]@{
     repository = $repositoryName
-    tag = if (-not $BranchBuild) { $Tag }
+    tag = $Tag
     version = $version
     commit = $Sha.ToLowerInvariant()
     generated_at_utc = [DateTime]::UtcNow.ToString('o')
     assets = $assetRecords
 }
-if ($BranchBuild) { $manifest['source_ref'] = 'refs/heads/latest' }
+if ($BranchBuild) {
+    $manifest['tag'] = $null
+    $manifest['source_ref'] = 'refs/heads/latest'
+}
 $manifestPath = Join-Path $OutputDir 'release-manifest.json'
 (ConvertTo-JsonString $manifest) | Set-Content -LiteralPath $manifestPath -Encoding UTF8
 Write-Host "[ok] release manifest: $manifestPath"

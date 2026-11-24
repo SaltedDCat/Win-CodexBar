@@ -67,6 +67,26 @@ try {
     Assert-AssetMatchesSidecar $asset
     [IO.File]::WriteAllText("$asset.sha256", ('0' * 64) + "  bad`n")
     Assert-Throws { Assert-AssetMatchesSidecar $asset } 'sidecar mismatch fails'
+
+    foreach ($name in $assetNames | Where-Object { $_ -notlike '*.sha256' }) {
+        $asset = Join-Path $testRoot $name
+        [IO.File]::WriteAllText($asset, $name)
+        $hash = Get-AssetSha256 $asset
+        [IO.File]::WriteAllText("$asset.sha256", "$hash  $name`n")
+    }
+    $emitScript = Join-Path $scriptRoot 'emit-release-manifest.ps1'
+    $sourceSha = '0123456789abcdef0123456789abcdef01234567'
+    $taggedOutput = Join-Path $testRoot 'tagged'
+    $branchOutput = Join-Path $testRoot 'branch'
+    & $emitScript -AssetsDir $testRoot -OutputDir $taggedOutput -Tag 'v0.48.0' -Sha $sourceSha
+    & $emitScript -AssetsDir $testRoot -OutputDir $branchOutput -Tag 'v0.48.0' -Sha $sourceSha -Repository 'SaltedDCat/Win-CodexBar' -BranchBuild
+    $taggedManifest = Get-Content -Raw -LiteralPath (Join-Path $taggedOutput 'release-manifest.json') | ConvertFrom-Json
+    $branchManifest = Get-Content -Raw -LiteralPath (Join-Path $branchOutput 'release-manifest.json') | ConvertFrom-Json
+    Assert-Equal $taggedManifest.tag 'v0.48.0' 'tagged manifest includes the release tag'
+    Assert-True ($null -eq $branchManifest.tag) 'branch manifest does not claim a release tag'
+    Assert-Equal $branchManifest.source_ref 'refs/heads/latest' 'branch manifest identifies its source ref'
+    Assert-Equal $branchManifest.commit $sourceSha 'branch manifest identifies its source commit'
+    Assert-Equal $branchManifest.assets.Count 6 'branch manifest lists packages and sidecars'
 } finally {
     if ([IO.Directory]::Exists($testRoot)) { [IO.Directory]::Delete($testRoot, $true) }
 }
