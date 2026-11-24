@@ -10,7 +10,8 @@ param(
     [Parameter(Mandatory)][string]$OutputDir,
     [Parameter(Mandatory)][string]$Tag,
     [Parameter(Mandatory)][string]$Sha,
-    [string]$Repository = 'nesszer/Win-CodexBar'
+    [string]$Repository = 'nesszer/Win-CodexBar',
+    [switch]$BranchBuild
 )
 
 Set-StrictMode -Version Latest
@@ -27,6 +28,9 @@ $repositoryName = switch (Normalize-GitHubRepository $Repository) {
     'nesszer/win-codexbar' { 'nesszer/Win-CodexBar' }
     'salteddcat/win-codexbar' { 'SaltedDCat/Win-CodexBar' }
     default { throw "Unsupported manifest repository '$Repository'." }
+}
+if ($BranchBuild -and $repositoryName -ne 'SaltedDCat/Win-CodexBar') {
+    throw 'Branch manifests are reserved for the fork.'
 }
 $version = Get-ReleaseVersionFromTag $Tag
 if (-not (Test-Path -LiteralPath $AssetsDir -PathType Container)) {
@@ -62,12 +66,13 @@ $assetRecords = @(
 )
 $manifest = [ordered]@{
     repository = $repositoryName
-    tag = $Tag
+    tag = if (-not $BranchBuild) { $Tag }
     version = $version
     commit = $Sha.ToLowerInvariant()
     generated_at_utc = [DateTime]::UtcNow.ToString('o')
     assets = $assetRecords
 }
+if ($BranchBuild) { $manifest['source_ref'] = 'refs/heads/latest' }
 $manifestPath = Join-Path $OutputDir 'release-manifest.json'
 (ConvertTo-JsonString $manifest) | Set-Content -LiteralPath $manifestPath -Encoding UTF8
 Write-Host "[ok] release manifest: $manifestPath"

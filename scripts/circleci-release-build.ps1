@@ -10,7 +10,8 @@ param(
     [Parameter(Mandatory)][string]$Sha = $env:RELEASE_SHA,
     [string]$RepoRoot = '',
     [string]$OutputDir = '',
-    [string]$Repository = 'https://github.com/nesszer/Win-CodexBar.git'
+    [string]$Repository = 'https://github.com/nesszer/Win-CodexBar.git',
+    [switch]$BranchBuild
 )
 
 Set-StrictMode -Version Latest
@@ -108,13 +109,15 @@ try {
         '-RepoUrl', $repoUrl,
         '-WorkRoot', $workRoot
     ) $buildLog
-    Invoke-LoggedPowerShell (Join-Path $RepoRoot 'scripts\emit-release-manifest.ps1') @(
+    $manifestArguments = @(
         '-AssetsDir', $assetsDir,
         '-OutputDir', $OutputDir,
         '-Tag', $Tag,
         '-Sha', $Sha,
         '-Repository', $repositoryName
-    ) (Join-Path $OutputDir 'emit-release-manifest.log')
+    )
+    if ($BranchBuild) { $manifestArguments += '-BranchBuild' }
+    Invoke-LoggedPowerShell (Join-Path $RepoRoot 'scripts\emit-release-manifest.ps1') $manifestArguments (Join-Path $OutputDir 'emit-release-manifest.log')
     Write-Host "Credential-free Windows release build passed for $Tag ($Sha)."
 } finally {
     # Preserve the cache/ subdirectory (Cargo target + pnpm store) for

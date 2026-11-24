@@ -17,11 +17,13 @@ Enable workflows in the fork's Actions tab after applying these changes. The
 Fork Windows CI workflow runs the pinned Windows CI slice on pushes and pull
 requests targeting `latest`.
 
-Push a new `vX.Y.Z` tag pointing to a commit on the fork's `latest`. The tag must
-match the committed version files. The Fork Windows packages workflow builds
-that exact commit, then retains the unsigned installer, portable EXE and CLI
-ZIP with SHA-256 files and a source manifest in the Actions run. Existing
-tags do not trigger a new run when the workflow is enabled.
+Every push to `latest` triggers the Fork Windows packages workflow. Download
+the unsigned installer, portable EXE, and CLI ZIP under **Artifacts** on that
+workflow's run page. The bundle contains SHA-256 files and a source manifest.
+
+A push of a new `vX.Y.Z` tag also builds packages when the tag points to a
+commit on `latest` and matches the committed version files. Existing tags do
+not trigger a run when the workflow is enabled.
 
 To create an explicitly unsigned draft GitHub Release for each new tag,
 set the Actions repository variable `FORK_UNSIGNED_DRAFT` to `true` before

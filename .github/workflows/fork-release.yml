@@ -2,6 +2,7 @@ name: Fork Windows packages (unsigned)
 
 on:
   push:
+    branches: [latest]
     tags: ['v*.*.*']
 
 permissions: {}
@@ -12,7 +13,7 @@ concurrency:
 
 jobs:
   package:
-    if: github.repository == 'SaltedDCat/Win-CodexBar'
+    if: github.repository == 'SaltedDCat/Win-CodexBar' && !github.event.deleted
     runs-on: windows-2025
     timeout-minutes: 120
     permissions:
@@ -27,15 +28,26 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Validate release tag and source
+      - name: Validate build version and source
         id: source
         shell: pwsh
         run: |
           $sha = git rev-parse --verify "$env:GITHUB_SHA^{commit}"
           if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve the triggering commit.' }
-          powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/release-preflight.ps1 -Tag $env:GITHUB_REF_NAME -Sha $sha -RepoRoot . -Repository $env:GITHUB_REPOSITORY -MainBranch latest
-          if ($LASTEXITCODE -ne 0) { throw 'Release preflight failed.' }
+          $versionTag = $env:GITHUB_REF_NAME
+          $preflightOptions = @()
+          if ($env:GITHUB_REF_TYPE -eq 'branch') {
+            $versionLines = @(Get-Content -LiteralPath version.env | Where-Object { $_ -match '^MARKETING_VERSION=' })
+            if ($versionLines.Count -ne 1 -or $versionLines[0] -notmatch '^MARKETING_VERSION=([0-9]+\.[0-9]+\.[0-9]+)$') {
+              throw 'version.env must declare one canonical MARKETING_VERSION.'
+            }
+            $versionTag = "v$($Matches[1])"
+            $preflightOptions = @('-BranchBuild')
+          }
+          powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/release-preflight.ps1 -Tag $versionTag -Sha $sha -RepoRoot . -Repository $env:GITHUB_REPOSITORY -MainBranch latest @preflightOptions
+          if ($LASTEXITCODE -ne 0) { throw 'Build preflight failed.' }
           "sha=$sha" >> $env:GITHUB_OUTPUT
+          "version-tag=$versionTag" >> $env:GITHUB_OUTPUT
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -50,7 +62,13 @@ jobs:
         shell: pwsh
         env:
           RELEASE_SHA: ${{ steps.source.outputs.sha }}
-        run: powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/circleci-release-build.ps1 -Tag $env:GITHUB_REF_NAME -Sha $env:RELEASE_SHA -RepoRoot . -OutputDir release-output -Repository $env:GITHUB_REPOSITORY
+          VERSION_TAG: ${{ steps.source.outputs.version-tag }}
+        run: |
+          $buildOptions = @()
+          if ($env:GITHUB_REF_TYPE -eq 'branch') {
+            $buildOptions = @('-BranchBuild')
+          }
+          powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/circleci-release-build.ps1 -Tag $env:VERSION_TAG -Sha $env:RELEASE_SHA -RepoRoot . -OutputDir release-output -Repository $env:GITHUB_REPOSITORY @buildOptions
 
       - name: Upload unsigned packages and manifest
         id: upload
@@ -68,7 +86,7 @@ jobs:
   draft:
     name: Create a draft GitHub release for unsigned packages
     needs: package
-    if: vars.FORK_UNSIGNED_DRAFT == 'true'
+    if: github.ref_type == 'tag' && vars.FORK_UNSIGNED_DRAFT == 'true'
     runs-on: windows-2025
     timeout-minutes: 15
     permissions:

@@ -4,16 +4,19 @@
     Validate the exact, canonical release source selected by the release workflow.
 
 .DESCRIPTION
-    This is deliberately credential-free. It accepts only canonical vX.Y.Z tags,
-    verifies that the checked-out commit and tag resolve to the supplied SHA, and
-    proves the tag commit is reachable from the repository's release branch. It also checks
-    every committed project version file before a release build is allowed to run.
+    Validates canonical vX.Y.Z versions, exact source commits, and ancestry on
+    the release branch. Tagged builds also verify the tag against the source.
+    All committed project version files must match the requested version.
 
 .PARAMETER AllowTagSourceMismatch
     Manual SignPath test-only mode. The checked-out source may be newer than
     the version tag, but the tag must be in that source commit's history and
     all version files must still match the selected tag. Production release
     workflows never use this switch.
+
+.PARAMETER BranchBuild
+    Package the exact commit from a push to the fork's latest branch. Tag
+    selects the version to validate in the build files.
 #>
 
 [CmdletBinding()]
@@ -23,7 +26,8 @@ param(
     [string]$RepoRoot = '',
     [string]$Repository = "nesszer/Win-CodexBar",
     [string]$MainBranch = "main",
-    [switch]$AllowTagSourceMismatch
+    [switch]$AllowTagSourceMismatch,
+    [switch]$BranchBuild
 )
 
 Set-StrictMode -Version Latest
@@ -90,7 +94,13 @@ $expectedBranch = if ((Normalize-GitHubRepository $Repository) -eq 'salteddcat/w
 if ($MainBranch -cne $expectedBranch) {
     throw "Release ancestry for '$Repository' must be checked against '$expectedBranch'."
 }
-if (-not $AllowTagSourceMismatch -and $env:GITHUB_REF_TYPE -and $env:GITHUB_REF_TYPE -ne 'tag') {
+if ($BranchBuild -and ($AllowTagSourceMismatch -or
+        (Normalize-GitHubRepository $Repository) -ne 'salteddcat/win-codexbar' -or
+        $env:GITHUB_EVENT_NAME -ne 'push' -or $env:GITHUB_REF -ne 'refs/heads/latest' -or
+        $env:GITHUB_SHA -ne $Sha)) {
+    throw 'Branch packaging requires the exact commit from a push to the fork latest branch.'
+}
+if (-not $BranchBuild -and -not $AllowTagSourceMismatch -and $env:GITHUB_REF_TYPE -and $env:GITHUB_REF_TYPE -ne 'tag') {
     throw "Branch builds are not release builds; GITHUB_REF_TYPE was '$env:GITHUB_REF_TYPE'."
 }
 if (-not $AllowTagSourceMismatch -and $env:GITHUB_HEAD_REF) {
@@ -111,19 +121,21 @@ try {
     }
     Write-Host "[ok] HEAD is immutable SHA $Sha"
 
-    $tagSha = Invoke-GitCapture @('rev-parse', '--verify', "$Tag^{commit}")
-    if (-not $AllowTagSourceMismatch -and $tagSha -ne $Sha.ToLowerInvariant()) {
-        throw "Tag '$Tag' resolves to '$tagSha', not immutable release SHA '$Sha'."
-    }
-    if ($AllowTagSourceMismatch) {
-        $git = Get-Command git -ErrorAction Stop
-        & $git.Source merge-base --is-ancestor $tagSha $Sha 2>&1 | Out-Null
-        if ($LASTEXITCODE -ne 0) {
-            throw "Test source commit $Sha must contain the selected tag '$Tag' in its history."
+    if (-not $BranchBuild) {
+        $tagSha = Invoke-GitCapture @('rev-parse', '--verify', "$Tag^{commit}")
+        if (-not $AllowTagSourceMismatch -and $tagSha -ne $Sha.ToLowerInvariant()) {
+            throw "Tag '$Tag' resolves to '$tagSha', not immutable release SHA '$Sha'."
         }
-        Write-Host "[ok] test source $Sha contains tag $Tag ($tagSha)"
-    } else {
-        Write-Host "[ok] $Tag resolves to $Sha"
+        if ($AllowTagSourceMismatch) {
+            $git = Get-Command git -ErrorAction Stop
+            & $git.Source merge-base --is-ancestor $tagSha $Sha 2>&1 | Out-Null
+            if ($LASTEXITCODE -ne 0) {
+                throw "Test source commit $Sha must contain the selected tag '$Tag' in its history."
+            }
+            Write-Host "[ok] test source $Sha contains tag $Tag ($tagSha)"
+        } else {
+            Write-Host "[ok] $Tag resolves to $Sha"
+        }
     }
 
     $remoteMainRef = "refs/remotes/origin/$MainBranch"
