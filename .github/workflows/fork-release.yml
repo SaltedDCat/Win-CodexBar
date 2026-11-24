@@ -37,6 +37,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Release preflight failed.' }
           "sha=$sha" >> $env:GITHUB_OUTPUT
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.22.1
+
       - name: Install release prerequisites
         shell: pwsh
         run: powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/install-release-prerequisites.ps1 -RepoRoot .

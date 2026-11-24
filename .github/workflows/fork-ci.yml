@@ -23,8 +23,29 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Run the Windows CI slice
+      - name: Install pinned Rust
         shell: pwsh
         run: |
           $rust = (Get-Content -Raw -LiteralPath scripts/circleci-pinned-rust.txt).Trim()
-          powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/run-circleci-pr-check.ps1 -RustVersion $rust -NodeVersion 24.22.1 -NodeMajor 24
+          rustup toolchain install $rust --profile minimal --component rustfmt --component clippy --target x86_64-pc-windows-msvc
+          if ($LASTEXITCODE -ne 0) { throw "Could not install Rust $rust." }
+          rustup default $rust
+
+      - name: Cache Cargo dependencies and build output
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install pinned pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          package_json_file: apps/desktop-tauri/package.json
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.22.1
+          cache: pnpm
+          cache-dependency-path: apps/desktop-tauri/pnpm-lock.yaml
+
+      - name: Run the Windows CI slice
+        shell: pwsh
+        run: powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/local-check.ps1 -Slice ci
