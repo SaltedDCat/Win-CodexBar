@@ -354,7 +354,7 @@ mod tests {
         std::fs::write(session.join("unrelated-file"), b"preserve").unwrap();
         let script = format!(
             r#"
-$fixturePackage = {package}
+$fixturePackage = [System.IO.Path]::GetFullPath({package})
 $script:stopped = $false
 function Get-AppxPackage {{ [pscustomobject]@{{ InstallLocation = $fixturePackage; Version = '1.0' }} }}
 function Get-CimInstance {{
@@ -435,7 +435,7 @@ if (-not $script:stopped -or -not $script:launched) {{ throw 'Restart did not co
         let script = format!(
             r#"
 $ErrorActionPreference = 'Stop'
-$fixturePackage = {package}
+$fixturePackage = [System.IO.Path]::GetFullPath({package})
 $launcher = Join-Path $fixturePackage 'app\ChatGPT.exe'
 $script:killed = @()
 function Get-AppxPackage {{ [pscustomobject]@{{ InstallLocation = $fixturePackage; Version = '1.0' }} }}

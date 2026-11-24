@@ -880,7 +880,6 @@ mod tests {
         environment.insert("PI_CONFIG_DIR".to_string(), "config".to_string());
         environment.insert("OMP_PROFILE".to_string(), "work".to_string());
 
-        let roots = pi_compatible_session_roots_for(home.path(), &cwd, &environment);
         let pi_root = cwd.join("pi-sessions");
         let omp_root = home
             .path()
@@ -889,8 +888,13 @@ mod tests {
             .join("work")
             .join("agent")
             .join("sessions");
-        assert!(roots.iter().any(|root| root == &pi_root));
-        assert!(roots.iter().any(|root| root == &omp_root));
+        std::fs::create_dir_all(&pi_root).unwrap();
+        std::fs::create_dir_all(&omp_root).unwrap();
+        let roots = pi_compatible_session_roots_for(home.path(), &cwd, &environment);
+        let canonical_omp_root =
+            crate::agent_sessions::pi_family::roots::canonicalize_for_scan(&omp_root);
+        assert!(roots.contains(&pi_root));
+        assert!(roots.contains(&canonical_omp_root));
 
         let duplicate = concat!(
             r#"{"type":"session","id":"session-1"}"#,
@@ -904,8 +908,6 @@ mod tests {
             r#"{"id":"unique","role":"assistant","provider":"anthropic","model":"claude-sonnet-4-6","timestamp":"2026-07-20T13:00:00Z","usage":{"input":70,"output":7}}"#,
             "\n"
         );
-        std::fs::create_dir_all(&pi_root).unwrap();
-        std::fs::create_dir_all(&omp_root).unwrap();
         std::fs::write(pi_root.join("session.jsonl"), duplicate).unwrap();
         std::fs::write(omp_root.join("session.jsonl"), duplicate).unwrap();
         std::fs::write(omp_root.join("unique.jsonl"), unique).unwrap();
