@@ -36,7 +36,6 @@ Winget packages come from [microsoft/winget-pkgs](https://github.com/microsoft/w
 
 ### Code signing
 
-Releases are not signed yet. SignPath.io is set up in the GitHub Actions release workflow, but signing stays off until SignPath issues the Release certificate 2026 and the `release-signing` policy is valid. Until then, check each download against its `.sha256` file. See [docs/CODE_SIGNING.md](docs/CODE_SIGNING.md).
 
 ## First run
 

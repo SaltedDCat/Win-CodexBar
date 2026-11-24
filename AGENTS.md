@@ -41,8 +41,7 @@ Win-CodexBar is the Windows port of CodexBar: a tray app that shows AI-provider 
 | `rust/src/cli/` | CLI subcommands (`codexbar` binary) |
 | `scripts/` | `dev.ps1`, `local-check.ps1`, release, smoke and safety scripts. There is no root `Scripts/` (capital S) pipeline. |
 | `docs/` | Windows port docs and ADRs. Upstream macOS docs there are read-only reference. |
-| `.circleci/config.yml` | Primary hosted Windows PR and push gate |
-| `.github/workflows/pr-check.yml` | Manual Blacksmith Windows reserve |
+| `.github/workflows/pr-check.yml` | Manual Blacksmith Windows checks |
 | `.github/workflows/interaction-guard.yml` | Lightweight GitHub-hosted policy guard |
 
 ## Important files
@@ -61,8 +60,7 @@ Win-CodexBar is the Windows port of CodexBar: a tray app that shows AI-provider 
 | `apps/desktop-tauri/src-tauri/src/surface_target.rs` | Proof and settings tab whitelist |
 | `apps/desktop-tauri/src-tauri/tauri.conf.json` | Active Tauri config |
 | `scripts/local-check.ps1` | Local CI slice |
-| `.circleci/config.yml` | Primary hosted PR and push gate (`.github/workflows/pr-check.yml` is the manual Blacksmith reserve) |
-| `CONTEXT.md` | CI roles and budget glossary (Blacksmith pool, `CI_BUDGET_MODE`) |
+| `CONTEXT.md` | CI roles and budget glossary (Blacksmith, `CI_BUDGET_MODE`) |
 
 ## Commands
 
@@ -134,8 +132,8 @@ These need the user's confirmation, because they are hard to undo or affect shar
 ## Runtime and tooling
 
 - **pnpm** only. The exact version is pinned only by `packageManager` in `apps/desktop-tauri/package.json`, and the lockfile reflects it. Don't add npm or yarn lockfiles.
-- **Node:** CircleCI pins Node 24.22.1. There is no `.nvmrc`. Use 24.22.1 locally to match CI.
-- **Rust:** edition 2024, stable, target `x86_64-pc-windows-msvc`. CI pins the version in `scripts/circleci-pinned-rust.txt`. There is no committed `rust-toolchain.toml`, `rustfmt.toml` or `clippy.toml`; use the defaults plus the CI flags (`clippy -- -D warnings`).
+- **Node:** The Blacksmith workflow uses Node 24.22.1. There is no `.nvmrc`. Use 24.22.1 locally to match CI.
+- **Rust:** edition 2024, stable, target `x86_64-pc-windows-msvc`. There is no committed `rust-toolchain.toml`, `rustfmt.toml` or `clippy.toml`; use the defaults plus the CI flags (`clippy -- -D warnings`).
 - Test tray, DPAPI and browser-cookie behavior on a native Windows host. WSL and Linux can't exercise those paths.
 
 ### Worktree storage policy
@@ -145,7 +143,7 @@ These need the user's confirmation, because they are hard to undo or affect shar
 - Don't commit a shared writable `target-dir` in `.cargo/config.toml`, set a global `CARGO_TARGET_DIR`, or share one exact target directory between concurrent builds. The source worktree stays isolated; only reproducible build output moves.
 - `scripts/worktree-storage.ps1` is read-only. It reports free disk, registered worktrees, worktree-local `target` and `node_modules`, and the configured external Cargo target. Its warnings are advisory. It never deletes files, cleans Cargo output, switches branches or prunes Git metadata.
 - `target`, Cargo incremental output, frontend build output and reinstallable `node_modules` are disposable. Source edits, commits, branches, PR history and review evidence are not. Before you retire a worktree, check that it is clean and its commit is preserved. Removing a worktree doesn't delete its branch.
-- Warning levels: under 60 GiB free, over 1 GiB for one worktree target, or over 5 GiB for all worktree targets together. Review cleanup at once under 35 GiB free, or over 5 GiB for one target or 10 GiB in total. CircleCI keeps its normal runner-local cache and skips this audit.
+- Warning levels: under 60 GiB free, over 1 GiB for one worktree target, or over 5 GiB for all worktree targets together. Review cleanup at once under 35 GiB free, or over 5 GiB for one target or 10 GiB in total.
 
 ## Testing & QA
 
@@ -153,9 +151,9 @@ These need the user's confirmation, because they are hard to undo or affect shar
 - Frontend: Vitest 3 with jsdom and Testing Library. From `apps/desktop-tauri`: `pnpm test` (`src/**/*.{test,spec}.{ts,tsx}`).
 - Parser and fetcher changes: add deterministic samples or fixtures where practical.
 - Run the checks that fit the change. There are no coverage thresholds; don't invent any.
-- **Hosted PR check.** CircleCI Windows is the primary gate. It runs `scripts/local-check.ps1 -Slice ci` for same-repository ordinary and canonical PRs and for `main`, and never for fork PRs. Micro PRs that target `port/upstream-*` skip hosted Windows compute on purpose; a micro-named PR that targets `main` does not. `.github/workflows/pr-check.yml` is a manual Blacksmith Windows reserve only. Budget details are in `CONTEXT.md`, `.github/CI.md` and `docs/adr/`.
+- **Hosted PR check.** Dispatch `.github/workflows/pr-check.yml` on Blacksmith Windows to run `scripts/local-check.ps1 -Slice ci`. See [CI](.github/CI.md).
 - **Local mirror.** `.\scripts\local-check.ps1 -Slice ci` mirrors the hosted check. The default developer slice, with no parameters, doesn't run the full installer or smoke test unless asked.
-- **Fork PRs and reviews.** CircleCI never runs on fork PRs, and this project adds no CircleCI API token. Read the full diff. Then run the `-Slice ci` steps from main's copy of `scripts/local-check.ps1` against the fork head (`pull/<number>/head`) in a disposable, credential-free Windows environment (Windows Sandbox or a throwaway VM; a worktree is not isolation), and post the result (see `.github/CI.md`).
+- **Fork PRs and reviews.** Read the full diff. Run the `-Slice ci` steps from the trusted base in a disposable, credential-free Windows environment and post the result. See [CI](.github/CI.md).
 - **CodeRabbit** (`.coderabbit.yaml`) reviews every PR, drafts included, against these rules. Fix or answer its findings before merging.
 
 ### UI validation with CUA ([trycua/cua](https://github.com/trycua/cua))
@@ -190,14 +188,13 @@ Every Cloudflare runtime (Workers, Containers, Sandbox, Browser Rendering) runs 
 - **Frontend adapter:** the [browser proof](#browser-proof-pnpm-proofcheck) build. `pnpm build:proof` writes a static `dist-proof/`. `pnpm proof:check -- --url <base>` or `--cdp <ws-url>` runs the same scenarios against a hosted copy or a remote browser. The mock stays out of the production bundle (`src/proof/isolation.test.ts`).
 - **Fixtures only.** Never upload real settings, cookies, tokens, account emails or provider responses.
 - **Labeling.** Mark these screenshots in PRs as "Chromium (Linux), mocked IPC". Fonts, scrollbars and DPI differ from WebView2.
-- **Windows-only checks away from the dev machine.** Use a Windows host (a CircleCI `windows` orb or a disposable Windows VM) and run the same rebuild, proof mode, then CDP and CUA loop. Cloudflare may front that host with a `cloudflared` tunnel behind Cloudflare Access and store its artifacts, but the proof itself must come from Windows.
+- **Windows-only checks away from the dev machine.** Use a Windows host or a disposable Windows VM and run the same rebuild, proof mode, then CDP and CUA loop. Cloudflare may front that host with a `cloudflared` tunnel behind Cloudflare Access and store its artifacts, but the proof itself must come from Windows.
 - **Account safety.** The Cloudflare account is shared with unrelated projects, and no Win-CodexBar resources exist on it yet. Read-only `list` and `get` calls are fine. Don't reuse, redeploy or bind into another project's Workers, Browser Rendering bindings or containers. Creating, deploying or editing any Cloudflare resource needs explicit approval from the user in the current turn. Never delete Cloudflare resources. Keep Cloudflare tokens out of the repo, logs and PR text.
 
 ## Commits and PRs
 
 - Short imperative commit messages, for example `Fix Claude CLI parser` or `Improve cookie import errors`. One change per commit.
 - A PR includes: a summary of behavior changes, the commands you ran (`cargo test`, `pnpm test`, `.\scripts\local-check.ps1` ...), Windows screenshots or GIFs for UI changes, and the linked issue or reference.
-- `ci/circleci: pr-check` is the primary Windows gate; `.github/workflows/pr-check.yml` is the manual Blacksmith backup. Porting micro PRs that target `port/upstream-*` use focused local evidence and skip automatic hosted Windows CI on purpose. Same-repository PRs to `main` always get the hosted gate; fork PRs never do (see Fork PRs and reviews).
 - Webview-only UI PRs may attach `pnpm proof:check` output and screenshots instead (see [Browser proof](#browser-proof-pnpm-proofcheck)).
 - Other UI, tray, Settings, float-bar and visual PRs need hybrid proof by default: CDP for actions and state, CUA for real pixels and native checks, after a fresh local rebuild. See [UI validation with CUA](#ui-validation-with-cua-trycuacua).
 - Before a non-trivial merge, run the thermo-nuclear structure review when the project process requires it.

@@ -4,7 +4,7 @@ This page shows how to build and test Win-CodexBar on Windows. The desktop app i
 
 ## Prerequisites
 
-- Rust stable with the `x86_64-pc-windows-msvc` target. CI pins the version in `scripts/circleci-pinned-rust.txt` (1.98.0).
+- Rust stable with the `x86_64-pc-windows-msvc` target.
 - Visual Studio Build Tools with the **Desktop development with C++** workload.
 - Node.js. CI uses Node 24.22.1, so use the same version locally.
 - pnpm, at the exact version in the `packageManager` field of `apps/desktop-tauri/package.json` (`pnpm@11.25.0`). Corepack can activate it. Don't use npm or yarn.
@@ -84,7 +84,7 @@ Run the same check as the hosted PR check:
 .\scripts\local-check.ps1 -Slice ci
 ```
 
-`CONTEXT.md` lists its 12 steps. With no parameters, `local-check.ps1` runs a shorter developer check: the worktree storage report, the `gh-safe.sh` tests, both Rust test suites, and the frontend tests and build. Add `-Format`, `-Clippy`, `-ReleaseDoctor` or `-All` for more.
+`CONTEXT.md` lists its 11 steps. With no parameters, `local-check.ps1` runs a shorter developer check: the worktree storage report, the `gh-safe.sh` tests, both Rust test suites, and the frontend tests and build. Add `-Format`, `-Clippy`, `-ReleaseDoctor` or `-All` for more.
 
 To run single steps:
 
@@ -119,8 +119,6 @@ Identical texts are stored once. Components that publish no license file show th
 Tests and builds don't prove tray, settings, float bar or WebView2 behavior. See [WINDOWS_PROOF.md](./WINDOWS_PROOF.md).
 
 ## Build a release on Windows
-
-GitHub Actions builds, signs and drafts the published releases when a `vX.Y.Z` tag is pushed (`.github/workflows/release.yml`). [release/ci-cd.md](./release/ci-cd.md) describes that flow.
 
 To build release assets on your own Windows PC, use the cached release builder:
 
@@ -223,7 +221,7 @@ Win-CodexBar/
 | [COOKIES.md](./COOKIES.md) | Browser cookie import |
 | [WSL.md](./WSL.md) | WSL limits |
 | [WINDOWS_PROOF.md](./WINDOWS_PROOF.md) | Proving UI changes on Windows |
-| [release/ci-cd.md](./release/ci-cd.md) | Hosted PR check and the release workflow |
+| [release/ci-cd.md](./release/ci-cd.md) | Manual Windows checks and local release builds |
 | [../AGENTS.md](../AGENTS.md) | Rules for agents and contributors |
 
 The upstream macOS docs (`steipete/CodexBar`) are read-only reference. Don't copy Swift, Keychain or Sparkle steps here without rewriting them for Windows.

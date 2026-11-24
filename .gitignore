@@ -131,7 +131,6 @@ proof-*/
 .zcode/
 .review/
 manifests/
-.circleci/info.yml
 target-port054/
 final-port054/
 build.log

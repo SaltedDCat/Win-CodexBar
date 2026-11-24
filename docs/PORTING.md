@@ -99,23 +99,11 @@ For upstream `X.Y.Z`:
 7. Keep SKIP / DEFER notes in that canonical PR body. Do not open empty stub
    modules "for later".
 
-#### CI budget rule for micro PRs
+#### Validation for micro PRs
 
-Hosted CI and review granularity are intentionally different:
-
-- Micro PRs targeting `port/upstream-*` are filtered out at CircleCI workflow
-  compilation time, before Windows compute starts. The decision uses the PR base/target
-  branch, not the head-branch name; a `port/micro-*` head opened directly to `main`
-  still receives the full hosted gate. Their required evidence is focused local tests
-  plus any broader local gate justified by the change.
-- High-risk Windows-native micro PRs may use the manual Blacksmith backup workflow
-  as a deliberate second opinion, but it is not automatic.
-- The canonical `port/upstream-X.Y.Z` -> `main` PR receives the full CircleCI
-  Windows gate. Run full local checks, CUA for UI-affecting work, and thermo review
-  before relying on hosted CI.
-- CircleCI Project Settings should have **Auto-cancel redundant workflows** enabled
-  so superseded non-default-branch runs stop consuming credits.
-- Do not use `[skip ci]` to bypass the canonical release PR gate.
+Run focused local tests for micro PRs. For the canonical release PR, run the
+full local check and attach Windows UI proof for changes that affect the app.
+The Blacksmith Windows workflow can also be dispatched manually.
 
 ### 4. Port fixtures from exact wire shapes
 
@@ -208,7 +196,7 @@ port PR unless that is an explicit separate decision. Port first; release later.
 | Review scope | One complete behavior per micro PR; branch `port/micro-X.Y.Z-<slug>` |
 | Canonical scope | One release-wide PR from `port/upstream-X.Y.Z` to `main` |
 | Commit scope | One workstream per commit; message prefix `Port upstream X.Y.Z: ...` |
-| Hosted CI | Micro branches skip automatic CircleCI; canonical release PR gets full CircleCI; Blacksmith is manual reserve |
+| Hosted CI | Blacksmith Windows checks are available by manual dispatch |
 | Source pin | Always `vX.Y.Z` tag URLs / compare range — never `main` |
 | Locales | Add keys in existing catalog style; machine translation allowed |
 | Ambiguity | **DEFER-with-evidence** > guess-port |

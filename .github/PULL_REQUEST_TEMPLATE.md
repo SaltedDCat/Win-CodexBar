@@ -22,7 +22,7 @@ Check every area this PR changes or could affect:
 
 ## Validation
 
-Hosted PR check runs on Blacksmith Windows when `CI_BUDGET_MODE` is not `off` (see `.github/workflows/pr-check.yml` and `CONTEXT.md`). Still run the local slice and list commands/results below. If a check is not relevant, say why.
+The manual PR check runs on Blacksmith Windows when `CI_BUDGET_MODE` is not `off` (see `.github/workflows/pr-check.yml` and `CONTEXT.md`). Still run the local slice and list commands/results below. If a check is not relevant, say why.
 
 - [ ] `powershell.exe -ExecutionPolicy Bypass -NoProfile -File scripts\local-check.ps1`
 - [ ] For full pre-release validation: `powershell.exe -ExecutionPolicy Bypass -NoProfile -File scripts\local-check.ps1 -All -Version <version>`

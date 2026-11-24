@@ -1,9 +1,6 @@
 name: PR check (Blacksmith backup)
 
-# Manual-only reserve CI. CircleCI is the primary hosted PR gate (ADR 0005).
-# Keep Blacksmith off automatic push/PR triggers so its Windows allowance is
-# reserved for explicit second-opinion/fallback runs when CircleCI is degraded
-# or a high-risk Windows-native change merits independent confirmation.
+# Manual Windows checks.
 on:
   workflow_dispatch:
 
@@ -57,7 +54,5 @@ jobs:
           cache: pnpm
           cache-dependency-path: apps/desktop-tauri/pnpm-lock.yaml
 
-      # Same canonical slice as CircleCI. The backup intentionally does not run
-      # installer/release packaging, keeping manual diagnostic runs bounded.
       - name: Run local-check ci slice
         run: powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File scripts/local-check.ps1 -Slice ci

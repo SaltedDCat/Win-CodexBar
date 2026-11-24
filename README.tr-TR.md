@@ -43,7 +43,6 @@ Winget dağıtımı [microsoft/winget-pkgs](https://github.com/microsoft/winget-
 
 ## Kod İmzalama
 
-> **Kod imzalama:** SignPath.io üzerinden ücretsiz imzalama (sertifika: SignPath Foundation) **planlanmıştır, katılım beklenmektedir ve henüz sürüm işlem hattına bağlanmamıştır**. İmzalama ilkeleri için [docs/CODE_SIGNING.md](docs/CODE_SIGNING.md) belgesine bakın.
 > Windows sürüm yükleyicileri şu anda imzasızdır; bu durum hatalı bir SmartScreen/Defender uyarısına neden olabilir. Sürümle birlikte yayımlanan SHA-256 değerini doğrulayın; veri işleme bilgileri için [docs/PRIVACY.md](docs/PRIVACY.md) belgesine bakın.
 
 ## İlk Çalıştırma

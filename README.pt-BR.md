@@ -43,8 +43,6 @@ A distribuição pelo Winget foi aprovada no [microsoft/winget-pkgs](https://git
 
 ## Assinatura de código
 
-> **Assinatura de código:** o SignPath.io está integrado ao fluxo de lançamento do GitHub Actions, mas a assinatura em produção permanece bloqueada até a emissão do certificado Release 2026 e a validação da política `release-signing`. Consulte [docs/CODE_SIGNING.md](docs/CODE_SIGNING.md) para conhecer a política de assinatura.
-> A versão v0.60.3 é imutável e não está assinada; verifique os arquivos SHA-256. A primeira versão assinada será a próxima versão normal após a integração com o SignPath.
 
 ## Primeira execução
 
