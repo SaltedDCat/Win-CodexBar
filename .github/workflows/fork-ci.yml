@@ -1,0 +1,30 @@
+name: Fork Windows CI
+
+on:
+  push:
+    branches: [latest]
+  pull_request:
+    branches: [latest]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fork-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    if: github.repository == 'SaltedDCat/Win-CodexBar'
+    runs-on: windows-2025
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Run the Windows CI slice
+        shell: pwsh
+        run: |
+          $rust = (Get-Content -Raw -LiteralPath scripts/circleci-pinned-rust.txt).Trim()
+          powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/run-circleci-pr-check.ps1 -RustVersion $rust -NodeVersion 24.22.1 -NodeMajor 24

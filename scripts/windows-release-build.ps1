@@ -275,6 +275,10 @@ try {
     Invoke-Native $git.Source @("clean", "-ffdq", "-e", "apps/desktop-tauri/node_modules/")
 
     $commit = (& $git.Source rev-parse HEAD).Trim()
+    if ($LASTEXITCODE -ne 0) { throw 'Could not resolve the build checkout commit.' }
+    if ($Ref -match '^[0-9a-fA-F]{40}$' -and $commit -ne $Ref) {
+        throw "Build checkout resolved to '$commit', expected '$Ref'."
+    }
     $version = Get-AppVersion -CargoTomlPath (Join-Path $SourceDir "rust\Cargo.toml")
 
     $env:APP_VERSION = $version

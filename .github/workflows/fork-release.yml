@@ -1,0 +1,121 @@
+name: Fork Windows packages (unsigned)
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions: {}
+
+concurrency:
+  group: fork-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  package:
+    if: github.repository == 'SaltedDCat/Win-CodexBar'
+    runs-on: windows-2025
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    outputs:
+      artifact: ${{ steps.upload.outputs.artifact-id }}
+      sha: ${{ steps.source.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate release tag and source
+        id: source
+        shell: pwsh
+        run: |
+          $sha = git rev-parse --verify "$env:GITHUB_SHA^{commit}"
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve the triggering commit.' }
+          powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/release-preflight.ps1 -Tag $env:GITHUB_REF_NAME -Sha $sha -RepoRoot . -Repository $env:GITHUB_REPOSITORY -MainBranch latest
+          if ($LASTEXITCODE -ne 0) { throw 'Release preflight failed.' }
+          "sha=$sha" >> $env:GITHUB_OUTPUT
+
+      - name: Install release prerequisites
+        shell: pwsh
+        run: powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/install-release-prerequisites.ps1 -RepoRoot .
+
+      - name: Build unsigned packages from the validated commit
+        shell: pwsh
+        env:
+          RELEASE_SHA: ${{ steps.source.outputs.sha }}
+        run: powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/circleci-release-build.ps1 -Tag $env:GITHUB_REF_NAME -Sha $env:RELEASE_SHA -RepoRoot . -OutputDir release-output -Repository $env:GITHUB_REPOSITORY
+
+      - name: Upload unsigned packages and manifest
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: Win-CodexBar-unsigned-${{ github.ref_name }}-${{ steps.source.outputs.sha }}-${{ github.run_attempt }}
+          path: |
+            release-output/*.exe
+            release-output/*.zip
+            release-output/*.sha256
+            release-output/release-manifest.json
+          if-no-files-found: error
+          retention-days: 30
+
+  draft:
+    name: Create a draft GitHub release for unsigned packages
+    needs: package
+    if: vars.FORK_UNSIGNED_DRAFT == 'true'
+    runs-on: windows-2025
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          artifact-ids: ${{ needs.package.outputs.artifact }}
+          path: release-output
+          merge-multiple: true
+
+      - name: Verify packages and attach them to a draft release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ needs.package.outputs.sha }}
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          $version = $tag.Substring(1)
+          $manifestPath = 'release-output/release-manifest.json'
+          $manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
+          if ($manifest.repository -ne $env:GITHUB_REPOSITORY -or
+              $manifest.tag -ne $tag -or $manifest.commit -ne $env:RELEASE_SHA) {
+            throw 'The artifact manifest does not match this release.'
+          }
+          $packageNames = @(
+            "CodexBar-$version-Setup.exe",
+            "CodexBar-$version-portable.exe",
+            "CodexBarCLI-v$version-windows-x64.zip"
+          )
+          $expected = @($packageNames; $packageNames | ForEach-Object { "$_.sha256" })
+          if (Compare-Object ($expected | Sort-Object) ($manifest.assets.name | Sort-Object)) {
+            throw 'The artifact manifest does not list the expected release files.'
+          }
+          $files = foreach ($asset in $manifest.assets) {
+            $file = Join-Path release-output $asset.name
+            if ((Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash -ne $asset.sha256) {
+              throw "SHA-256 mismatch for $($asset.name)."
+            }
+            $file
+          }
+
+          $tagRef = "refs/tags/$tag"
+          $refs = git ls-remote "https://github.com/$env:GITHUB_REPOSITORY.git" $tagRef "$tagRef^{}"
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot verify the remote release tag.' }
+          $tagCommits = @{}
+          foreach ($line in $refs) {
+            $commit, $ref = $line -split "`t", 2
+            $tagCommits[$ref] = $commit
+          }
+          $tagSha = $tagCommits["$tagRef^{}"] ?? $tagCommits[$tagRef]
+          if ($tagSha -ne $env:RELEASE_SHA) { throw 'The release tag moved or was deleted.' }
+
+          $notes = "Unsigned Windows packages built from $env:RELEASE_SHA. Build: $env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+          gh release create $tag @files $manifestPath --repo $env:GITHUB_REPOSITORY --verify-tag --draft --title "Win-CodexBar $version (unsigned fork build)" --notes $notes

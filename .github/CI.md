@@ -11,6 +11,22 @@ Win-CodexBar separates continuous validation from release signing.
   .github/workflows/pr-check.yml.
 - interaction-guard.yml is a lightweight GitHub-hosted policy guard.
 
+## SaltedDCat fork
+
+Enable workflows in the fork's Actions tab after applying these changes. The
+Fork Windows CI workflow runs the pinned Windows CI slice on pushes and pull
+requests targeting `latest`.
+
+Push a new `vX.Y.Z` tag pointing to a commit on the fork's `latest`. The tag must
+match the committed version files. The Fork Windows packages workflow builds
+that exact commit, then retains the unsigned installer, portable EXE and CLI
+ZIP with SHA-256 files and a source manifest in the Actions run. Existing
+tags do not trigger a new run when the workflow is enabled.
+
+To create an explicitly unsigned draft GitHub Release for each new tag,
+set the Actions repository variable `FORK_UNSIGNED_DRAFT` to `true` before
+pushing the tag. Review the draft before publishing it.
+
 ## CircleCI validation
 
 .circleci/config.yml contains the pr-check workflow only. Canonical release

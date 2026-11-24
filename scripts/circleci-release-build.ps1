@@ -76,7 +76,11 @@ function Clear-DirectoryContents {
 
 if (-not (Test-CanonicalReleaseTag $Tag)) { throw "Invalid canonical release tag '$Tag'." }
 if ($Sha -notmatch '^[0-9a-fA-F]{40}$') { throw "Invalid immutable SHA '$Sha'." }
-if ((Normalize-GitHubRepository $Repository) -ne 'nesszer/win-codexbar') { throw 'Repository must be canonical nesszer/Win-CodexBar.' }
+$repositoryName = Normalize-GitHubRepository $Repository
+if ($repositoryName -notin @('nesszer/win-codexbar', 'salteddcat/win-codexbar')) {
+    throw "Unsupported release build repository '$Repository'."
+}
+$repoUrl = "https://github.com/$repositoryName.git"
 if (-not (Test-Path -LiteralPath $RepoRoot -PathType Container)) { throw "Missing repository root: $RepoRoot" }
 
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
@@ -101,14 +105,15 @@ try {
     Invoke-LoggedPowerShell (Join-Path $RepoRoot 'scripts\release-doctor.ps1') @('-Version', $version, '-SkipGitHub') $doctorLog
     Invoke-LoggedPowerShell (Join-Path $RepoRoot 'scripts\windows-release-build.ps1') @(
         '-Ref', $Sha,
-        '-RepoUrl', $Repository,
+        '-RepoUrl', $repoUrl,
         '-WorkRoot', $workRoot
     ) $buildLog
     Invoke-LoggedPowerShell (Join-Path $RepoRoot 'scripts\emit-release-manifest.ps1') @(
         '-AssetsDir', $assetsDir,
         '-OutputDir', $OutputDir,
         '-Tag', $Tag,
-        '-Sha', $Sha
+        '-Sha', $Sha,
+        '-Repository', $repositoryName
     ) (Join-Path $OutputDir 'emit-release-manifest.log')
     Write-Host "Credential-free Windows release build passed for $Tag ($Sha)."
 } finally {

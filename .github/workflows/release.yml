@@ -13,6 +13,7 @@ concurrency:
 
 jobs:
   sign:
+    if: github.repository == 'nesszer/Win-CodexBar'
     name: Build and sign
     runs-on: windows-latest
     timeout-minutes: 240

@@ -6,7 +6,7 @@
 .DESCRIPTION
     This is deliberately credential-free. It accepts only canonical vX.Y.Z tags,
     verifies that the checked-out commit and tag resolve to the supplied SHA, and
-    proves the tag commit is reachable from the protected main branch. It also checks
+    proves the tag commit is reachable from the repository's release branch. It also checks
     every committed project version file before a release build is allowed to run.
 
 .PARAMETER AllowTagSourceMismatch
@@ -82,8 +82,13 @@ if (-not (Test-CanonicalReleaseTag $Tag)) {
 if ([string]::IsNullOrWhiteSpace($Sha) -or $Sha -notmatch '^[0-9a-fA-F]{40}$') {
     throw "Release requires a full 40-character commit SHA; received '$Sha'."
 }
-if ([string]::IsNullOrWhiteSpace($MainBranch) -or $MainBranch -ne 'main') {
-    throw "Release ancestry must be checked against the protected main branch."
+$expectedBranch = if ((Normalize-GitHubRepository $Repository) -eq 'salteddcat/win-codexbar') {
+    'latest'
+} else {
+    'main'
+}
+if ($MainBranch -cne $expectedBranch) {
+    throw "Release ancestry for '$Repository' must be checked against '$expectedBranch'."
 }
 if (-not $AllowTagSourceMismatch -and $env:GITHUB_REF_TYPE -and $env:GITHUB_REF_TYPE -ne 'tag') {
     throw "Branch builds are not release builds; GITHUB_REF_TYPE was '$env:GITHUB_REF_TYPE'."
@@ -127,19 +132,19 @@ try {
     if ($isShallow -eq 'true') {
         & $git.Source fetch --quiet --no-tags --unshallow origin 2>&1 | Out-Null
         if ($LASTEXITCODE -ne 0) {
-            throw 'Could not obtain full history for protected main ancestry validation.'
+            throw 'Could not obtain full history for release branch ancestry validation.'
         }
     }
     & $git.Source fetch --quiet --no-tags --force origin "$MainBranch`:$remoteMainRef" 2>&1 | Out-Null
     if ($LASTEXITCODE -ne 0) {
-        throw "Could not fetch protected origin/$MainBranch for ancestry validation."
+        throw "Could not fetch origin/$MainBranch for ancestry validation."
     }
     $mainSha = Invoke-GitCapture @('rev-parse', "${remoteMainRef}^{commit}")
     & $git.Source merge-base --is-ancestor $Sha $remoteMainRef 2>&1 | Out-Null
     if ($LASTEXITCODE -ne 0) {
-        throw "Release commit $Sha is not reachable from protected origin/$MainBranch ($mainSha)."
+        throw "Release commit $Sha is not reachable from origin/$MainBranch ($mainSha)."
     }
-    Write-Host "[ok] $Sha is reachable from protected origin/$MainBranch ($mainSha)"
+    Write-Host "[ok] $Sha is reachable from origin/$MainBranch ($mainSha)"
 
     $version = Get-ReleaseVersionFromTag $Tag
     $versionFiles = [ordered]@{

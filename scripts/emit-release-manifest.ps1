@@ -23,8 +23,10 @@ if (-not (Test-CanonicalReleaseTag $Tag)) {
 if ($Sha -notmatch '^[0-9a-fA-F]{40}$') {
     throw "Manifest requires a full immutable commit SHA; received '$Sha'."
 }
-if ((Normalize-GitHubRepository $Repository) -ne 'nesszer/win-codexbar') {
-    throw "Manifest repository must be canonical nesszer/Win-CodexBar."
+$repositoryName = switch (Normalize-GitHubRepository $Repository) {
+    'nesszer/win-codexbar' { 'nesszer/Win-CodexBar' }
+    'salteddcat/win-codexbar' { 'SaltedDCat/Win-CodexBar' }
+    default { throw "Unsupported manifest repository '$Repository'." }
 }
 $version = Get-ReleaseVersionFromTag $Tag
 if (-not (Test-Path -LiteralPath $AssetsDir -PathType Container)) {
@@ -59,7 +61,7 @@ $assetRecords = @(
     }
 )
 $manifest = [ordered]@{
-    repository = 'nesszer/Win-CodexBar'
+    repository = $repositoryName
     tag = $Tag
     version = $version
     commit = $Sha.ToLowerInvariant()
