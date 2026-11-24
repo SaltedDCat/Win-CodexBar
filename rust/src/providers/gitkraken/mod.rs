@@ -17,7 +17,6 @@ use crate::core::{
 use crate::providers::{BoundedBodyError, read_bounded_response};
 
 const USAGE_URL: &str = "https://api.gitkraken.dev/v1/ai-tasks/usage";
-const CREDENTIAL_TARGET: &str = "codexbar-gitkraken";
 const TOKEN_ENV: &str = "GITKRAKEN_API_TOKEN";
 const ORGANIZATION_ENV: &str = "GITKRAKEN_ORG_ID";
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(15);
@@ -120,13 +119,9 @@ impl Provider for GitKrakenProvider {
 }
 
 fn resolve_token(configured: Option<&str>) -> Result<String, ProviderError> {
-    let keyring_token = keyring::Entry::new(CREDENTIAL_TARGET, "api_token")
-        .ok()
-        .and_then(|entry| entry.get_password().ok());
     let token = configured
         .filter(|token| !token.trim().is_empty())
         .map(str::to_string)
-        .or(keyring_token)
         .or_else(|| std::env::var(TOKEN_ENV).ok())
         .unwrap_or_default();
     let token = token.trim();

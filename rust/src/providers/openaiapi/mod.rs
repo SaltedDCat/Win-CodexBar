@@ -726,7 +726,7 @@ impl Provider for OpenAIApiProvider {
 /// Each `env_names` entry carries whether that variable holds an Admin key.
 fn resolve_api_key(
     explicit: Option<&str>,
-    credential_target: &str,
+    _credential_target: &str,
     env_names: &[(&str, bool)],
 ) -> Result<ApiCredential, ProviderError> {
     if let Some(key) = explicit
@@ -734,15 +734,6 @@ fn resolve_api_key(
     {
         return Ok(ApiCredential {
             key: key.trim().to_string(),
-            is_admin: true,
-        });
-    }
-    if let Ok(entry) = keyring::Entry::new(credential_target, "api_key")
-        && let Ok(key) = entry.get_password()
-        && !key.trim().is_empty()
-    {
-        return Ok(ApiCredential {
-            key,
             is_admin: true,
         });
     }

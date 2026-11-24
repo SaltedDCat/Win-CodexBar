@@ -437,19 +437,13 @@ fn format_metric(value: f64) -> String {
 
 fn resolve_api_key(
     explicit: Option<&str>,
-    credential_target: &str,
+    _credential_target: &str,
     env_names: &[&str],
 ) -> Result<String, ProviderError> {
     if let Some(key) = explicit
         && !key.trim().is_empty()
     {
         return Ok(key.trim().to_string());
-    }
-    if let Ok(entry) = keyring::Entry::new(credential_target, "api_key")
-        && let Ok(key) = entry.get_password()
-        && !key.trim().is_empty()
-    {
-        return Ok(key);
     }
     for env in env_names {
         if let Ok(key) = std::env::var(env)

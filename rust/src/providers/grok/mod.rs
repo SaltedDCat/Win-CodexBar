@@ -461,7 +461,7 @@ impl GrokProvider {
                     }
                 }
                 GrokAutoStep::CookieRefresh => {
-                    return self.fetch_with_cookie_refresh(ctx).await;
+                    return Err(ProviderError::NoCookies);
                 }
             }
         }
@@ -504,33 +504,6 @@ impl GrokProvider {
                 None
             }
         }
-    }
-
-    /// Cookie refresh path (upstream #2458):
-    /// 1. Try last validated cached cookie header (background reuse)
-    /// 2. On miss/auth failure: re-import browser cookies, validate, cache
-    async fn fetch_with_cookie_refresh(
-        &self,
-        ctx: &FetchContext,
-    ) -> Result<ProviderFetchResult, ProviderError> {
-        use crate::browser::cookie_cache::CookieHeaderCache;
-
-        if let Some(cached) = CookieHeaderCache::load(ProviderId::Grok) {
-            match self.fetch_with_cookie(&cached.cookie_header, ctx).await {
-                Ok(result) => return Ok(result),
-                Err(err) if is_cookie_authentication_failure(&err) => {
-                    CookieHeaderCache::clear(ProviderId::Grok);
-                }
-                Err(err) => return Err(err),
-            }
-        }
-
-        let cookie_header = crate::providers::browser_cookie_header(&["grok.com"])?;
-        let result = self.fetch_with_cookie(&cookie_header, ctx).await?;
-        // Best-effort cache write: failing to persist the cookie only costs a
-        // re-read from the browser on the next fetch.
-        let _cached = CookieHeaderCache::store(ProviderId::Grok, &cookie_header, "browser");
-        Ok(result)
     }
 
     async fn fetch_billing(
@@ -760,7 +733,7 @@ impl Provider for GrokProvider {
                     if let Some(cookie_header) = &ctx.manual_cookie_header {
                         return self.fetch_with_cookie(cookie_header, ctx).await;
                     }
-                    self.fetch_with_cookie_refresh(ctx).await
+                    Err(ProviderError::NoCookies)
                 }
                 SourceMode::Cli | SourceMode::OAuth if ctx.token_account_isolated => {
                     self.fetch_isolated_account(ctx).await

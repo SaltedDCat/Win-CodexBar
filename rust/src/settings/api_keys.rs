@@ -241,7 +241,7 @@ pub fn get_api_key_providers() -> Vec<ProviderConfigInfo> {
             name: "Ollama",
             api_key_env_var: Some("OLLAMA_API_KEY / OLLAMA_KEY"),
             api_key_help: Some(
-                "Optional: use an Ollama API key for Cloud validation, or browser cookies for usage.",
+                "Optional: use an Ollama API key for Cloud validation, or a manual Cookie header for usage.",
             ),
             dashboard_url: Some("https://ollama.com/settings"),
         },
@@ -322,7 +322,7 @@ pub fn get_api_key_providers() -> Vec<ProviderConfigInfo> {
             name: "Command Code",
             api_key_env_var: Some("COMMAND_CODE_API_KEY"),
             api_key_help: Some(
-                "Used by Auto when set and by the API usage source. Without a key, Auto uses browser cookies. Set it here or in COMMAND_CODE_API_KEY.",
+                "Used by Auto when set and by the API usage source. Without a key, use a manual Cookie header. Set it here or in COMMAND_CODE_API_KEY.",
             ),
             dashboard_url: Some("https://commandcode.ai/studio"),
         },
@@ -487,7 +487,7 @@ pub fn get_api_key_providers() -> Vec<ProviderConfigInfo> {
             id: ProviderId::Grok,
             name: "Grok",
             api_key_env_var: None,
-            api_key_help: Some("Uses Grok browser cookies or ~/.grok/auth.json."),
+            api_key_help: Some("Uses a manual Grok Cookie header or ~/.grok/auth.json."),
             dashboard_url: Some("https://grok.com/settings/subscription"),
         },
         ProviderConfigInfo {
@@ -518,7 +518,7 @@ pub fn get_api_key_providers() -> Vec<ProviderConfigInfo> {
             name: "Groq",
             api_key_env_var: Some("GROQ_API_KEY"),
             api_key_help: Some(
-                "Usage & spend come from your console.groq.com browser session automatically. \
+                "For usage and spend, provide a console.groq.com Cookie header manually. \
                  An API key is optional and only adds Enterprise Prometheus metrics.",
             ),
             dashboard_url: Some("https://console.groq.com/settings/metrics"),
@@ -614,7 +614,7 @@ pub fn get_api_key_providers() -> Vec<ProviderConfigInfo> {
             name: "Droid (Factory)",
             api_key_env_var: Some("FACTORY_API_KEY"),
             api_key_help: Some(
-                "Get your API key from Factory → Settings → API Keys. Optional fallback: %USERPROFILE%\\.factory\\.env. Auto mode tries the key first, then browser cookies.",
+                "Get your API key from Factory → Settings → API Keys. Optional fallback: %USERPROFILE%\\.factory\\.env. Auto mode tries the key first, then a configured Cookie header.",
             ),
             dashboard_url: Some("https://app.factory.ai/settings/api-keys"),
         },

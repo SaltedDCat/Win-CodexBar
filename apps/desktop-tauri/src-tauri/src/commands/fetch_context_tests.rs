@@ -698,7 +698,7 @@ fn fetch_context_resolves_each_case() {
             },
         ),
         (
-            "muse_automatic_cookie_source_requests_the_browser_import",
+            "muse_legacy_automatic_cookie_source_does_not_import",
             ProviderId::Muse,
             CtxInput {
                 cookie_source: Some("auto"),
@@ -708,7 +708,7 @@ fn fetch_context_resolves_each_case() {
             Expect {
                 source: Some(Auto),
                 cookie: Some(None),
-                browser_import: Some(true),
+                browser_import: Some(false),
                 ..Default::default()
             },
         ),

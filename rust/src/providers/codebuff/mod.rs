@@ -1,7 +1,7 @@
 //! Codebuff provider implementation.
 //!
 //! Fetches credit usage from Codebuff's REST API using an API key from
-//! Preferences, Windows Credential Manager, `CODEBUFF_API_KEY`, or the
+//! Preferences, `CODEBUFF_API_KEY`, or the
 //! Manicode/Codebuff credentials file.
 
 use async_trait::async_trait;
@@ -16,7 +16,6 @@ use crate::core::{
 use crate::providers::http_util::{StatusPolicy, send_json};
 
 const DEFAULT_API_BASE: &str = "https://www.codebuff.com";
-const CODEBUFF_CREDENTIAL_TARGET: &str = "codexbar-codebuff";
 
 fn clean_api_key(token: &str) -> Option<String> {
     let token = token.trim();
@@ -62,7 +61,6 @@ impl CodebuffProvider {
     fn get_api_key(api_key: Option<&str>) -> Result<String, ProviderError> {
         api_key
             .and_then(clean_api_key)
-            .or_else(Self::api_key_from_keyring)
             .or_else(Self::api_key_from_env)
             .or_else(Self::api_key_from_credentials_file)
             .ok_or_else(|| {
@@ -71,11 +69,6 @@ impl CodebuffProvider {
                         .to_string(),
                 )
             })
-    }
-
-    fn api_key_from_keyring() -> Option<String> {
-        let entry = keyring::Entry::new(CODEBUFF_CREDENTIAL_TARGET, "api_key").ok()?;
-        clean_api_key(&entry.get_password().ok()?)
     }
 
     fn api_key_from_env() -> Option<String> {

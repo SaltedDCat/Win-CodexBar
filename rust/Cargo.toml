@@ -53,14 +53,12 @@ image = { version = "0.25", default-features = false }
 rusqlite = { version = "0.32", features = ["bundled"] }
 
 # Encryption for cookie decryption
-aes-gcm = "0.10"
 base64 = "0.22"
 
 # Hashing for update verification
 sha2 = "0.10"
 
 # Secure credential storage
-keyring = "3"
 
 # UUID generation
 uuid = { version = "1", features = ["v4", "serde"] }
@@ -86,7 +84,6 @@ unic-langid = "0.9"
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.58", features = [
     "Win32_Foundation",
-    "Win32_Security_Credentials",
     "Win32_Security_Cryptography",
     "Win32_Media_Audio",
     "Win32_NetworkManagement_IpHelper",

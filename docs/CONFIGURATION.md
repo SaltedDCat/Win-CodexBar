@@ -51,7 +51,6 @@ The app keeps its files in `%APPDATA%\CodexBar` (`dirs::config_dir()` plus `Code
 | `hooks.json` | `%APPDATA%\CodexBar` | No | Hook rules |
 | `http_server.json` | `%APPDATA%\CodexBar` | Yes | Built-in HTTP server settings and its bearer token |
 | `cli-usage-cache.json` | `%APPDATA%\CodexBar` | No | Usage limits shared with the CLI (only when **Share usage with the CLI** is on) |
-| `<provider>-cookie.json` | `%LOCALAPPDATA%\CodexBar` | Yes | Cached browser cookies |
 | `codex-weekly-reset-v1.json` | `%LOCALAPPDATA%\CodexBar` | Yes | Codex weekly reset cache |
 
 - Files marked DPAPI are written through `secure_file` in `rust/src/settings/`. On Windows it wraps them with DPAPI for the current user every time it saves.
@@ -259,7 +258,6 @@ The float bar section is on this pane too. Every control except the first is dis
 | Control | Key | Default |
 | --- | --- | --- |
 | Hide personal information | `hide_personal_info` | off |
-| Disable Credential Manager access | `disable_keychain_access` | off |
 | Codex local log folders | `codex_custom_sessions_dirs` (`;`-separated) | none |
 | PowerToys status pipe | `powertoys_status_pipe_enabled` | off |
 | Share usage with the CLI | `share_usage_with_cli` | off |
@@ -367,7 +365,7 @@ These are never exported:
 
 - Secrets: `provider_configs` (API keys, cookies, token accounts) and every `http_proxy_*` key.
 - Machine paths and hosts: sound file paths, Codex log folders, SSH hosts and the pinned cost time zone.
-- Choices that need consent or change the system: start at login, start minimized, hooks, the global shortcut, agent sessions, Credential Manager access, reading Claude Code's credentials, Codex external OAuth sources, OpenCodex logs, the PowerToys pipe, float bar on and click-through, Pin to Taskbar, always on top and Stay Awake.
+- Choices that need consent or change the system: start at login, start minimized, hooks, the global shortcut, agent sessions, reading Claude Code's credentials, Codex external OAuth sources, OpenCodex logs, the PowerToys pipe, float bar on and click-through, Pin to Taskbar, always on top and Stay Awake.
 - Update settings.
 - Keys outside the version 1 list, such as `menu_bar_color_pace`, `weekly_progress_work_days` and `cost_summary_display_style`.
 

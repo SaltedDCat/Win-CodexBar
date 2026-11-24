@@ -40,17 +40,13 @@ profile. Resolve the live locations with `codexbar config path` or see
 | Token accounts | `token-accounts.json` | Named API-token accounts you configure |
 | Hooks | `hooks.json` | Optional local executable hooks you enable |
 
-Secret material (API keys, manual cookies, token accounts) is read and written
-through the app's secure-file layer, which applies user-scoped **Windows DPAPI**
-protection where available; some credential types additionally use Windows
-Credential Manager through keyring helpers. Secrets are never written to logs.
+Secret material is read and written through the secure-file layer, which uses Windows DPAPI on Windows. Secrets are never written to logs.
 
 ### Usage caches — `%LOCALAPPDATA%\CodexBar\`
 
 | Store | Contents |
 |-------|----------|
 | `cost-usage\` | Local token-cost scan cache parsed from your own provider CLI logs |
-| `*-cookie.json` | Short-lived per-provider cookie snapshots |
 | `local-usage\codex-workspaces-v1.sqlite` | Codex Workspaces snapshot sidecar |
 | `openai-dashboard.json`, widget/tray snapshots | Last-rendered usage display state |
 
@@ -63,12 +59,7 @@ Deleting these folders removes every trace the app wrote, including secrets.
 
 ### Browser cookies
 
-If — and only if — you opt in per provider, the app reads cookies for that
-provider's domain from your local Chrome (any channel), Chromium, Edge, Brave,
-or Firefox profile (Chromium cookies are decrypted locally with your user
-DPAPI key; Firefox cookies are read from its SQLite store). Cookies are used
-only to call that provider's own web endpoints for usage data. See
-[COOKIES.md](COOKIES.md).
+Providers that use cookies accept a manually supplied Cookie header. Win-CodexBar uses the header to request usage from the corresponding provider. See [COOKIES.md](COOKIES.md).
 
 ## Network endpoints the app contacts
 

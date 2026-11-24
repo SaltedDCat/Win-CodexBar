@@ -11,8 +11,8 @@ import { loadStyles, ruleBlock } from "../../../../test/styles";
 import { CookieSourceSection } from "./CookieSourceSection";
 
 const OPTIONS = [
-  { value: "auto", label: "Automatic" },
   { value: "manual", label: "Manual" },
+  { value: "off", label: "Disabled" },
 ];
 
 function renderSection(
@@ -24,7 +24,6 @@ function renderSection(
       providerId="ollama"
       currentValue="manual"
       options={OPTIONS}
-      manualCookieMissing
       t={(key) => key}
       onChanged={onChanged}
       {...overrides}
@@ -33,61 +32,26 @@ function renderSection(
   return { onChanged };
 }
 
-describe("CookieSourceSection manual cookie hint", () => {
+describe("CookieSourceSection", () => {
   beforeEach(() => {
     tauriMocks.setProviderCookieSource.mockReset();
   });
 
-  it("explains an empty Manual configuration and switches to Automatic on request", async () => {
+  it("switches from Manual to Disabled", async () => {
     tauriMocks.setProviderCookieSource.mockResolvedValue(undefined);
     const { onChanged } = renderSection();
 
-    expect(screen.getByText("ProviderManualCookieMissing")).toBeInTheDocument();
-    expect(tauriMocks.setProviderCookieSource).not.toHaveBeenCalled();
-
-    fireEvent.click(
-      screen.getByRole("button", { name: "ProviderUseAutomaticCookies" }),
-    );
+    fireEvent.click(screen.getByRole("radio", { name: "Disabled" }));
 
     await waitFor(() => expect(onChanged).toHaveBeenCalledTimes(1));
-    expect(tauriMocks.setProviderCookieSource).toHaveBeenCalledWith(
-      "ollama",
-      "auto",
-    );
-  });
-
-  it("stays quiet when the backend reports a header is configured", () => {
-    renderSection({ manualCookieMissing: false });
-
-    expect(
-      screen.queryByText("ProviderManualCookieMissing"),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "ProviderUseAutomaticCookies" }),
-    ).not.toBeInTheDocument();
-  });
-
-  it("hides the action when Automatic is already selected", () => {
-    renderSection({ currentValue: "auto" });
-
-    expect(
-      screen.queryByRole("button", { name: "ProviderUseAutomaticCookies" }),
-    ).not.toBeInTheDocument();
-  });
-
-  it("hides the action for providers without an Automatic option", () => {
-    renderSection({ options: [{ value: "manual", label: "Manual" }] });
-
-    expect(
-      screen.queryByRole("button", { name: "ProviderUseAutomaticCookies" }),
-    ).not.toBeInTheDocument();
+    expect(tauriMocks.setProviderCookieSource).toHaveBeenCalledWith("ollama", "off");
   });
 
   it("renders the picker for a cookie provider and nothing without options", () => {
     const { unmount } = render(
       <CookieSourceSection
         providerId="claude"
-        currentValue="auto"
+        currentValue="manual"
         options={OPTIONS}
         t={(key) => key}
         onChanged={vi.fn()}

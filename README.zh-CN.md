@@ -167,8 +167,7 @@ Windows 草稿发布流程完成；它会校验 SHA-256，绝不会覆盖已有�
 1. 启动 CodexBar — 它会驻留在系统托盘
 2. 点击托盘图标打开用量面板
 3. 前往 **Settings → Providers**，启用你使用的服务商
-4. 对于基于 Cookie 的服务商，点击服务商后使用 **Browser Cookies → Import**
-5. 对于基于 CLI 的服务商（`codex`、`claude`、`gemini`），请确保已登录
+4. 对于使用 Cookie 的服务商，打开该服务商设置，在 **浏览器 Cookie** 中粘贴 Cookie 标头并保存。
 
 ## CLI
 

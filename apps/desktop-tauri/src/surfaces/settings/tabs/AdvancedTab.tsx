@@ -86,9 +86,6 @@ export default function AdvancedTab({ settings, set, saving }: TabProps) {
     <>
       <SettingsGroup
         title={t("PrivacyTitle")}
-        footer={
-          settings.disableKeychainAccess ? <p>{t("CredentialAccessFooter")}</p> : undefined
-        }
       >
         <Field label={t("HidePersonalInfo")} description={t("HidePersonalInfoHelper")}>
           <Toggle
@@ -97,18 +94,6 @@ export default function AdvancedTab({ settings, set, saving }: TabProps) {
             ariaLabel={t("HidePersonalInfo")}
             disabled={saving}
             onChange={(v) => set({ hidePersonalInfo: v })}
-          />
-        </Field>
-        <Field
-          label={t("DisableAllKeychainLabel")}
-          description={t("DisableAllKeychainHelper")}
-        >
-          <Toggle
-            variant="switch"
-            checked={settings.disableKeychainAccess}
-            ariaLabel={t("DisableAllKeychainLabel")}
-            disabled={saving}
-            onChange={(v) => set({ disableKeychainAccess: v })}
           />
         </Field>
       </SettingsGroup>

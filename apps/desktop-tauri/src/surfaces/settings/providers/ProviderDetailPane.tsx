@@ -455,7 +455,6 @@ export function ProviderDetailPane({
             providerId={detail.id}
             currentValue={detail.cookieSource}
             options={cookieOptions}
-            manualCookieMissing={detail.manualCookieMissing}
             t={t}
             onChanged={reload}
           />

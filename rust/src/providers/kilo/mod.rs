@@ -18,7 +18,6 @@ use crate::core::{
 
 const TRPC_BASE: &str = "https://app.kilo.ai/api/trpc";
 const PROCEDURES: &str = "user.getCreditBlocks,kiloPass.getState,user.getAutoTopUpPaymentMethod";
-const KILO_CREDENTIAL_TARGET: &str = "codexbar-kilo";
 const AUTO_TOP_UP_DETAIL_ID: &str = "kilo-auto-top-up";
 
 #[derive(Debug, Deserialize)]
@@ -59,10 +58,6 @@ impl KiloProvider {
 
     fn get_api_key(api_key: Option<&str>) -> Result<String, ProviderError> {
         if let Some(token) = direct_kilo_api_key(api_key) {
-            return Ok(token);
-        }
-
-        if let Some(token) = keyring_kilo_api_key() {
             return Ok(token);
         }
 
@@ -254,14 +249,6 @@ fn add_finite(total: &mut f64, value: Option<f64>) {
 
 fn direct_kilo_api_key(api_key: Option<&str>) -> Option<String> {
     api_key.filter(|key| !key.is_empty()).map(str::to_string)
-}
-
-fn keyring_kilo_api_key() -> Option<String> {
-    keyring::Entry::new(KILO_CREDENTIAL_TARGET, "api_key")
-        .ok()?
-        .get_password()
-        .ok()
-        .filter(|token| !token.is_empty())
 }
 
 fn env_kilo_api_key() -> Option<String> {

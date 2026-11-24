@@ -176,25 +176,4 @@ describe("AdvancedTab Mac grouped layout", () => {
     }
   });
 
-  it("shows the credential-access footer while Credential Manager access is off", () => {
-    const set = vi.fn();
-    const { rerender } = render(
-      <AdvancedTab settings={settings} set={set} saving={false} />,
-    );
-    // The Claude keychain-prompt option lives in Providers > Claude > Options (Mac parity).
-    expect(screen.queryByRole("checkbox", { name: "AvoidKeychainPromptsLabel" })).toBeNull();
-    expect(screen.queryByText("CredentialAccessFooter")).toBeNull();
-
-    fireEvent.click(screen.getByRole("checkbox", { name: "DisableAllKeychainLabel" }));
-    expect(set).toHaveBeenCalledWith({ disableKeychainAccess: true });
-
-    rerender(
-      <AdvancedTab
-        settings={{ ...settings, disableKeychainAccess: true }}
-        set={set}
-        saving={false}
-      />,
-    );
-    expect(screen.getByText("CredentialAccessFooter")).toBeInTheDocument();
-  });
 });

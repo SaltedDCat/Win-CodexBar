@@ -4,24 +4,23 @@ use super::*;
 fn cookie_options_for_cookie_supporting_provider() {
     let opts = crate::commands::cookie_source_options_for("codex", Language::English);
     let values: Vec<_> = opts.iter().map(|o| o.value.as_str()).collect();
-    assert_eq!(values, vec!["auto", "manual", "off"]);
-    assert!(opts.iter().any(|o| o.label == "Automatic"));
+    assert_eq!(values, vec!["manual", "off"]);
     assert!(opts.iter().any(|o| o.label == "Manual"));
     assert!(opts.iter().any(|o| o.label == "Disabled"));
 }
 
 #[test]
-fn replicate_cookie_options_allow_automatic_and_manual_sessions() {
+fn replicate_cookie_options_require_a_manual_session() {
     let opts = crate::commands::cookie_source_options_for("replicate", Language::English);
     let values: Vec<_> = opts.iter().map(|option| option.value.as_str()).collect();
-    assert_eq!(values, vec!["auto", "manual"]);
+    assert_eq!(values, vec!["manual"]);
 }
 
 #[test]
 fn raycast_cookie_options_include_off_and_a_pinned_manual_session() {
     let opts = crate::commands::cookie_source_options_for("raycast", Language::English);
     let values: Vec<_> = opts.iter().map(|option| option.value.as_str()).collect();
-    assert_eq!(values, vec!["auto", "manual", "off"]);
+    assert_eq!(values, vec!["manual", "off"]);
 }
 
 #[test]

@@ -480,28 +480,14 @@
       ]
     },
     {
-      "name": "settings-claude-desktop-cookies",
+      "name": "settings-claude-manual-cookie",
       "query": "window=settings&tab=providers:claude&fixture=default&theme=dark",
       "size": [880, 620],
       "steps": [
-        { "expectText": ["Use Claude desktop app cookies", "follow the account signed in to the Claude desktop app"] },
-        { "expectSelector": "option[value=\"claude-desktop\"]" },
-        { "expectCall": { "cmd": "list_detected_browsers", "args": { "providerId": "claude" } } },
-        { "click": { "selector": ".settings-field__label", "label": "Use Claude desktop app cookies" } },
-        { "screenshot": "settings-claude-desktop-cookies" }
-      ]
-    },
-    {
-      "name": "settings-claude-cookie-no-browsers",
-      "query": "window=settings&tab=providers:claude&fixture=cookie-no-browsers&theme=dark",
-      "size": [880, 620],
-      "steps": [
-        { "expectText": ["Browser Cookies", "No supported browsers detected on this machine", "No cookie saved."] },
+        { "expectText": ["Browser Cookies", "No cookie saved."] },
         { "expectNoText": "Import from Browser" },
-        { "expectSelector": "textarea.credential-textarea" },
-        { "expectCall": { "cmd": "list_detected_browsers", "args": { "providerId": "claude" } } },
-        { "click": { "selector": "h4", "label": "Browser Cookies" } },
-        { "screenshot": "settings-claude-cookie-no-browsers" }
+        { "expectNoText": "Use Claude desktop app cookies" },
+        { "expectSelector": "textarea.credential-textarea" }
       ]
     },
     {

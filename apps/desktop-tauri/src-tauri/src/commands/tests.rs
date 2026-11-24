@@ -284,12 +284,12 @@ fn settings_snapshot_preserves_partial_config_order_for_enabled_providers() {
 }
 
 #[test]
-fn provider_cookie_source_lookup_roundtrips_known_providers() {
+fn provider_cookie_source_lookup_maps_legacy_values_to_manual() {
     let mut s = Settings::default();
-    super::provider_cookie_source_set(&mut s, "codex", "cli-config".to_string()).unwrap();
+    super::provider_cookie_source_set(&mut s, "codex", "auto".to_string()).unwrap();
     assert_eq!(
         provider_cookie_source_lookup(&s, "codex").as_deref(),
-        Some("cli-config")
+        Some("manual")
     );
     assert!(provider_cookie_source_lookup(&s, "unknown-provider").is_none());
 }

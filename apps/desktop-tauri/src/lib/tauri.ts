@@ -15,7 +15,6 @@ import type {
   BootstrapState,
   CurrentSurfaceState,
   CookieInfoBridge,
-  DetectedBrowserBridge,
   Language,
   LocaleStrings,
   NotificationSoundEvent,
@@ -314,25 +313,6 @@ export function removeManualCookie(
   providerId: string,
 ): Promise<CookieInfoBridge[]> {
   return invoke<CookieInfoBridge[]>("remove_manual_cookie", { providerId });
-}
-
-/** With `providerId`, also lists a desktop app store only that provider may use. */
-export function listDetectedBrowsers(
-  providerId?: string,
-): Promise<DetectedBrowserBridge[]> {
-  return invoke<DetectedBrowserBridge[]>("list_detected_browsers", {
-    providerId: providerId ?? null,
-  });
-}
-
-export function importBrowserCookies(
-  providerId: string,
-  browserType: string,
-): Promise<CookieInfoBridge[]> {
-  return invoke<CookieInfoBridge[]>("import_browser_cookies", {
-    providerId,
-    browserType,
-  });
 }
 
 export function getAppInfo(): Promise<AppInfoBridge> {

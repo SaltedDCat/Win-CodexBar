@@ -99,15 +99,15 @@ fn hyper_unsupported_usage_source_routes_to_auto() {
 }
 
 #[test]
-fn hyper_exposes_upstream_cookie_source_picker() {
+fn hyper_exposes_manual_and_disabled_cookie_sources() {
     let settings = Settings::default();
     assert_eq!(
         super::provider_cookie_source_lookup(&settings, "hyper").as_deref(),
-        Some("auto")
+        Some("manual")
     );
     let options = super::cookie_source_options_for("hyper", Language::English);
     let values: Vec<_> = options.iter().map(|option| option.value.as_str()).collect();
-    assert_eq!(values, vec!["auto", "manual", "off"]);
+    assert_eq!(values, vec!["manual", "off"]);
     let descriptions: Vec<_> = options
         .iter()
         .map(|option| option.description.as_deref())
@@ -115,7 +115,6 @@ fn hyper_exposes_upstream_cookie_source_picker() {
     assert_eq!(
         descriptions,
         vec![
-            Some("Prefer a signed-in Hyper browser session, then fall back to an API key."),
             Some("Paste a Cookie header from hyper.charm.land."),
             Some("Use only the configured API key."),
         ]
@@ -148,17 +147,17 @@ fn groq_console_session_routes_like_hyper() {
 }
 
 #[test]
-fn groq_exposes_a_cookie_source_picker_defaulting_to_auto() {
+fn groq_exposes_a_cookie_source_picker_defaulting_to_manual() {
     let settings = Settings::default();
     assert_eq!(
         super::provider_cookie_source_lookup(&settings, "groq").as_deref(),
-        Some("auto")
+        Some("manual")
     );
     let values: Vec<_> = super::cookie_source_options_for("groq", Language::English)
         .into_iter()
         .map(|option| option.value)
         .collect();
-    assert_eq!(values, vec!["auto", "manual", "off"]);
+    assert_eq!(values, vec!["manual", "off"]);
 }
 
 /// Langdock is web-only: the picker chooses the session, a stored header
@@ -169,13 +168,13 @@ fn langdock_exposes_a_cookie_source_picker_and_routes_each_choice() {
     let settings = Settings::default();
     assert_eq!(
         super::provider_cookie_source_lookup(&settings, "langdock").as_deref(),
-        Some("auto")
+        Some("manual")
     );
     let values: Vec<_> = super::cookie_source_options_for("langdock", Language::English)
         .into_iter()
         .map(|option| option.value)
         .collect();
-    assert_eq!(values, vec!["auto", "manual", "off"]);
+    assert_eq!(values, vec!["manual", "off"]);
 
     let cookie = "auth_token=fixture";
     for source in ["auto", "manual"] {
@@ -210,13 +209,13 @@ fn lithosai_exposes_a_cookie_source_picker_and_routes_each_choice() {
     let settings = Settings::default();
     assert_eq!(
         super::provider_cookie_source_lookup(&settings, "lithosai").as_deref(),
-        Some("auto")
+        Some("manual")
     );
     let values: Vec<_> = super::cookie_source_options_for("lithosai", Language::English)
         .into_iter()
         .map(|option| option.value)
         .collect();
-    assert_eq!(values, vec!["auto", "manual", "off"]);
+    assert_eq!(values, vec!["manual", "off"]);
 
     let cookie = "__Host-console_session=fixture; __Host-console_csrf=fixture";
     for source in ["auto", "manual"] {
@@ -251,13 +250,13 @@ fn museai_exposes_a_cookie_source_picker_and_routes_each_choice() {
     let settings = Settings::default();
     assert_eq!(
         super::provider_cookie_source_lookup(&settings, "museai").as_deref(),
-        Some("auto")
+        Some("manual")
     );
     let values: Vec<_> = super::cookie_source_options_for("museai", Language::English)
         .into_iter()
         .map(|option| option.value)
         .collect();
-    assert_eq!(values, vec!["auto", "manual", "off"]);
+    assert_eq!(values, vec!["manual", "off"]);
 
     let cookie = "session=fixture";
     for source in ["auto", "manual"] {
@@ -292,13 +291,13 @@ fn workbuddy_exposes_a_cookie_source_picker_and_routes_each_choice() {
     let settings = Settings::default();
     assert_eq!(
         super::provider_cookie_source_lookup(&settings, "workbuddy").as_deref(),
-        Some("auto")
+        Some("manual")
     );
     let values: Vec<_> = super::cookie_source_options_for("workbuddy", Language::English)
         .into_iter()
         .map(|option| option.value)
         .collect();
-    assert_eq!(values, vec!["auto", "manual", "off"]);
+    assert_eq!(values, vec!["manual", "off"]);
 
     let cookie = "session=fixture";
     for source in ["auto", "manual"] {
@@ -333,13 +332,13 @@ fn tinyapi_exposes_a_cookie_source_picker_and_routes_each_choice() {
     let settings = Settings::default();
     assert_eq!(
         super::provider_cookie_source_lookup(&settings, "tinyapi").as_deref(),
-        Some("auto")
+        Some("manual")
     );
     let values: Vec<_> = super::cookie_source_options_for("tinyapi", Language::English)
         .into_iter()
         .map(|option| option.value)
         .collect();
-    assert_eq!(values, vec!["auto", "manual", "off"]);
+    assert_eq!(values, vec!["manual", "off"]);
 
     let cookie = "session=fixture";
     for source in ["auto", "manual"] {
@@ -374,13 +373,13 @@ fn xapi_exposes_a_cookie_source_picker_and_routes_each_choice() {
     let settings = Settings::default();
     assert_eq!(
         super::provider_cookie_source_lookup(&settings, "xapi").as_deref(),
-        Some("auto")
+        Some("manual")
     );
     let values: Vec<_> = super::cookie_source_options_for("xapi", Language::English)
         .into_iter()
         .map(|option| option.value)
         .collect();
-    assert_eq!(values, vec!["auto", "manual", "off"]);
+    assert_eq!(values, vec!["manual", "off"]);
 
     let cookie = "auth_token=fixture; ct0=fixture";
     for source in ["auto", "manual"] {
@@ -415,13 +414,13 @@ fn parallel_exposes_a_cookie_source_picker_and_routes_each_choice() {
     let settings = Settings::default();
     assert_eq!(
         super::provider_cookie_source_lookup(&settings, "parallel").as_deref(),
-        Some("auto")
+        Some("manual")
     );
     let values: Vec<_> = super::cookie_source_options_for("parallel", Language::English)
         .into_iter()
         .map(|option| option.value)
         .collect();
-    assert_eq!(values, vec!["auto", "manual", "off"]);
+    assert_eq!(values, vec!["manual", "off"]);
 
     let cookie = "__Secure-session=fixture";
     for source in ["auto", "manual"] {
@@ -455,13 +454,13 @@ fn claude_platform_exposes_a_cookie_source_picker_and_routes_each_choice() {
     let settings = Settings::default();
     assert_eq!(
         super::provider_cookie_source_lookup(&settings, "claudeplatform").as_deref(),
-        Some("auto")
+        Some("manual")
     );
     let values: Vec<_> = super::cookie_source_options_for("claudeplatform", Language::English)
         .into_iter()
         .map(|option| option.value)
         .collect();
-    assert_eq!(values, vec!["auto", "manual", "off"]);
+    assert_eq!(values, vec!["manual", "off"]);
 
     let cookie = "sessionKey=sk-ant-sid01-fixture";
     for source in ["auto", "manual"] {

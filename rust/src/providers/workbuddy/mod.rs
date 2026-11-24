@@ -436,17 +436,8 @@ fn other(message: &str) -> Failure {
     Failure::Error(ProviderError::Other(message.to_owned()))
 }
 
-/// Each detected browser's WorkBuddy session. The browsers are walked here
-/// rather than through the shared candidate helper, which drops the
-/// App-Bound Encryption skip as soon as any other browser has cookies.
 fn browser_sessions() -> BrowserSessions {
-    use crate::browser::cookies::CookieExtractor;
-    use crate::browser::detection::BrowserDetector;
-
-    collect_sessions(BrowserDetector::detect_all().into_iter().map(|browser| {
-        let cookies = CookieExtractor::extract_for_domain(&browser, COOKIE_DOMAIN);
-        (browser.browser_type, cookies)
-    }))
+    BrowserSessions::default()
 }
 
 /// One Cookie header per browser that holds a `www.workbuddy.cn` session,

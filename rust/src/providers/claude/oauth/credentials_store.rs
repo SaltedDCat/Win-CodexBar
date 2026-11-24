@@ -1,4 +1,4 @@
-//! Credential loading (environment / file / OS keyring), persistence of
+//! Credential loading (environment / file), persistence of
 //! refreshed tokens back to disk, and the in-memory refreshed-credentials
 //! cache.
 //!
@@ -17,7 +17,6 @@ use super::ClaudeOAuthCredentials;
 use crate::atomic_file;
 use crate::core::ProviderError;
 
-const KEYRING_SERVICE: &str = "Claude Code-credentials";
 const ENV_TOKEN_KEY: &str = "CODEXBAR_CLAUDE_OAUTH_TOKEN";
 const ENV_SCOPES_KEY: &str = "CODEXBAR_CLAUDE_OAUTH_SCOPES";
 
@@ -27,7 +26,6 @@ const ENV_SCOPES_KEY: &str = "CODEXBAR_CLAUDE_OAUTH_SCOPES";
 pub(super) enum CredentialSource {
     Environment,
     File(PathBuf),
-    Keyring(String), // the account string that matched
     SavedAccount(PathBuf, String, String),
 }
 
@@ -103,7 +101,7 @@ pub(super) fn store_refreshed(source: &CredentialSource, credentials: &ClaudeOAu
     }
 }
 
-/// Load OAuth credentials from environment, file, or Claude Code's OS credential store.
+/// Load OAuth credentials from the environment or Claude Code's local file.
 pub(super) fn load_credentials() -> Result<(ClaudeOAuthCredentials, CredentialSource), ProviderError>
 {
     // Try environment variables first
@@ -118,30 +116,10 @@ pub(super) fn load_credentials() -> Result<(ClaudeOAuthCredentials, CredentialSo
         ));
     }
 
-    // Try credentials file. A stale default-profile file can outlive a CLI
-    // re-authentication that has already replaced the Windows credential
-    // manager item, so give a changed, fresh keyring record a chance to
-    // replace an expired file record. Fresh file credentials retain precedence.
-    let file_error = match load_from_file() {
-        Ok(file_creds) => {
-            if file_creds.is_expired()
-                && let Ok(Some(keyring)) = load_from_keyring()
-                && let Some(replacement) =
-                    replacement_from_changed_fresh_keyring(&file_creds, keyring)
-            {
-                return Ok(replacement);
-            }
-            return Ok((file_creds, CredentialSource::File(credentials_path()?)));
-        }
-        Err(err) => err,
-    };
-
-    // Current Claude Code builds store the same JSON payload in the OS credential store.
-    if let Some((creds, source)) = load_from_keyring()? {
-        return Ok((creds, source));
-    }
-
-    Err(file_error)
+    Ok((
+        load_from_file()?,
+        CredentialSource::File(credentials_path()?),
+    ))
 }
 
 /// Whether a non-empty `CODEXBAR_CLAUDE_OAUTH_TOKEN` override is set. It is
@@ -177,23 +155,6 @@ fn load_from_environment() -> Option<ClaudeOAuthCredentials> {
     })
 }
 
-/// Adopt a changed, fresh keyring credential only when the file-backed
-/// default-profile credential is expired. The keyring item is unscoped, so
-/// this loader deliberately has no custom-profile recovery path.
-fn replacement_from_changed_fresh_keyring(
-    file_creds: &ClaudeOAuthCredentials,
-    (keyring_creds, source): (ClaudeOAuthCredentials, CredentialSource),
-) -> Option<(ClaudeOAuthCredentials, CredentialSource)> {
-    if !file_creds.is_expired()
-        || keyring_creds.is_expired()
-        || keyring_creds.access_token == file_creds.access_token
-    {
-        return None;
-    }
-
-    Some((keyring_creds, source))
-}
-
 /// Load credentials from ~/.claude/.credentials.json
 fn load_from_file() -> Result<ClaudeOAuthCredentials, ProviderError> {
     let path = credentials_path()?;
@@ -208,93 +169,6 @@ fn load_from_file() -> Result<ClaudeOAuthCredentials, ProviderError> {
         .map_err(|e| ProviderError::OAuth(format!("Failed to read credentials file: {}", e)))?;
 
     parse_credentials_json(&content)
-}
-
-/// Load credentials from Claude Code's OS keychain / credential manager entry.
-fn load_from_keyring() -> Result<Option<(ClaudeOAuthCredentials, CredentialSource)>, ProviderError>
-{
-    for account in keyring_account_candidates() {
-        let entry = match keyring::Entry::new(KEYRING_SERVICE, &account) {
-            Ok(entry) => entry,
-            Err(err) => {
-                tracing::debug!(
-                    "Failed to open Claude Code credential entry for account {}: {}",
-                    account,
-                    err
-                );
-                continue;
-            }
-        };
-
-        let content = match entry.get_password() {
-            Ok(content) => content,
-            Err(keyring::Error::NoEntry) => continue,
-            Err(keyring::Error::Ambiguous(_)) => continue,
-            Err(err) => {
-                tracing::debug!(
-                    "Failed to read Claude Code credential entry for account {}: {}",
-                    account,
-                    err
-                );
-                continue;
-            }
-        };
-
-        if content.trim().is_empty() {
-            continue;
-        }
-
-        return parse_credentials_json(&content)
-            .map(|creds| Some((creds, CredentialSource::Keyring(account))));
-    }
-
-    #[cfg(target_os = "macos")]
-    if let Some(result) = load_from_macos_security_cli()? {
-        return Ok(Some(result));
-    }
-
-    Ok(None)
-}
-
-#[cfg(target_os = "macos")]
-fn load_from_macos_security_cli()
--> Result<Option<(ClaudeOAuthCredentials, CredentialSource)>, ProviderError> {
-    for account in keyring_account_candidates() {
-        let output = match std::process::Command::new("/usr/bin/security")
-            .args([
-                "find-generic-password",
-                "-s",
-                KEYRING_SERVICE,
-                "-a",
-                &account,
-                "-w",
-            ])
-            .output()
-        {
-            Ok(output) => output,
-            Err(err) => {
-                tracing::debug!(
-                    "Failed to run macOS security CLI for Claude credentials: {}",
-                    err
-                );
-                continue;
-            }
-        };
-
-        if !output.status.success() {
-            continue;
-        }
-
-        let content = String::from_utf8_lossy(&output.stdout);
-        if content.trim().is_empty() {
-            continue;
-        }
-
-        return parse_credentials_json(content.trim())
-            .map(|creds| Some((creds, CredentialSource::Keyring(account))));
-    }
-
-    Ok(None)
 }
 
 pub(super) fn parse_credentials_json(
@@ -345,41 +219,6 @@ fn credentials_from_oauth_data(oauth: OAuthData) -> Result<ClaudeOAuthCredential
     })
 }
 
-fn keyring_account_candidates() -> Vec<String> {
-    let mut candidates = Vec::new();
-    for key in ["USER", "USERNAME"] {
-        if let Ok(value) = std::env::var(key) {
-            push_keyring_candidate(&mut candidates, value);
-        }
-    }
-
-    #[cfg(not(windows))]
-    {
-        if let Ok(output) = std::process::Command::new("whoami").output()
-            && output.status.success()
-        {
-            let value = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            push_keyring_candidate(&mut candidates, value.clone());
-            if let Some((_, username)) = value.rsplit_once('\\') {
-                push_keyring_candidate(&mut candidates, username.to_string());
-            }
-            if let Some((_, username)) = value.rsplit_once('/') {
-                push_keyring_candidate(&mut candidates, username.to_string());
-            }
-        }
-    }
-
-    candidates
-}
-
-fn push_keyring_candidate(candidates: &mut Vec<String>, value: String) {
-    let value = value.trim();
-    if value.is_empty() || candidates.iter().any(|candidate| candidate == value) {
-        return;
-    }
-    candidates.push(value.to_string());
-}
-
 /// Get the credentials file path
 fn credentials_path() -> Result<PathBuf, ProviderError> {
     super::super::accounts::config_dir()
@@ -402,7 +241,7 @@ pub(super) fn persist_refreshed_credentials(
 
     let path = credentials_path()?;
     if !path.exists() {
-        // Loaded from keyring/env; there is no file to update.
+        // Loaded from the environment; there is no file to update.
         return Ok(());
     }
 
@@ -468,7 +307,7 @@ fn apply_refresh_to_credentials_json(
 mod tests {
     use super::{
         CredentialSource, apply_refresh_to_credentials_json, cached_refreshed_if_fresher,
-        parse_credentials_json, replacement_from_changed_fresh_keyring, store_refreshed,
+        parse_credentials_json, store_refreshed,
     };
     use crate::providers::claude::oauth::ClaudeOAuthCredentials;
     use chrono::{DateTime, Duration, Utc};
@@ -565,45 +404,6 @@ mod tests {
             error
                 .to_string()
                 .contains("Claude OAuth access token missing")
-        );
-    }
-
-    #[test]
-    fn changed_fresh_keyring_replaces_expired_file_credentials() {
-        let expired_file = creds(
-            "expired-file-token",
-            Some("expired-file-refresh"),
-            Some(Utc::now() - Duration::hours(1)),
-        );
-        let keyring_source = CredentialSource::Keyring("test-user".to_string());
-        let fresh_keyring = creds(
-            "fresh-keyring-token",
-            Some("fresh-keyring-refresh"),
-            Some(Utc::now() + Duration::hours(1)),
-        );
-
-        let adopted = replacement_from_changed_fresh_keyring(
-            &expired_file,
-            (fresh_keyring, keyring_source.clone()),
-        )
-        .expect("changed fresh keyring credentials should replace an expired file");
-        assert_eq!(adopted.0.access_token, "fresh-keyring-token");
-        assert_eq!(adopted.1, keyring_source);
-
-        let expired_keyring = creds(
-            "another-keyring-token",
-            None,
-            Some(Utc::now() - Duration::minutes(1)),
-        );
-        assert!(
-            replacement_from_changed_fresh_keyring(
-                &expired_file,
-                (
-                    expired_keyring,
-                    CredentialSource::Keyring("test-user".to_string())
-                )
-            )
-            .is_none()
         );
     }
 

@@ -26,7 +26,7 @@ Rules:
 | Source | Meaning |
 | --- | --- |
 | `auto` | The provider's own fallback order |
-| `web` | Browser cookies or a pasted cookie against the provider's web dashboard |
+| `web` | A manually supplied Cookie header for the provider's web dashboard |
 | `cli` | A local CLI, PTY or RPC helper |
 | `oauth` | An OAuth flow, where the provider supports it |
 
@@ -107,7 +107,7 @@ organization.
 
 ## Cookie-backed providers
 
-Providers that read a web dashboard use cookies from a browser profile, or a cookie header you paste. Choose the browser for each provider in **Settings > Providers > (provider)**, then import. A pasted header is the fallback, and the only option under WSL. [COOKIES.md](./COOKIES.md#supported-browsers) lists the supported browsers.
+Providers that read a web dashboard can use a manually supplied Cookie header. See [COOKIES.md](./COOKIES.md) for the settings and CLI entry points.
 
 
 ### Venice web session
@@ -116,8 +116,6 @@ Venice normally uses an API key (USD / DIEM balance). The optional web mode
 reads the signed-in `venice.ai` Clerk session instead and reports the
 bundled-credit quota from the session token.
 
-- Web (automatic) mode needs a signed-in `venice.ai` tab in a supported
-  browser, because the session token comes from the `__session` cookie.
 - Clerk sessions last only about 60 seconds, so Web mode does not refresh
   unattended. When the session has expired, open `venice.ai` in the browser
   again and refresh.
@@ -137,18 +135,13 @@ must be a single line: the token command rejects multiline values with
   a rejected session reports an error without trying a cached or browser
   account.
 - The **API** usage source keeps saved sessions passive and uses the configured
-  key. Cookie source **Automatic** or **Off** also keeps them passive.
-- Unlike the Mac app, an empty Manual cookie source still falls back to browser
-  cookies, because Manual is the Windows default cookie source.
+  key. Cookie source **Off** also keeps them passive.
 
 ### Raycast credits
 
 Raycast reads the unofficial `frontend_api/current_user/ai_credits` route of
 `www.raycast.com` with the `__raycast_session` and `csrf_token` cookies only.
-Auto imports those cookies from Chrome (all profiles, exact `www.raycast.com`
-host first); Windows Chrome App-Bound Encryption can block automatic import, in
-which case paste a Cookie header under Manual. A manual header is pinned and
-never falls back to a browser, and Off makes no request. When the response has
+Provide a manual Cookie header. Off disables this session. When the response has
 a positive allowance and a known balance the provider shows one "credits left"
 meter with the renewal date; otherwise it shows the balance and total as detail
 rows. Top-up packages and credit details are not fetched.
@@ -156,9 +149,7 @@ rows. Top-up packages and credit details are not fetched.
 ### Replicate billing
 
 Replicate uses the signed-in `replicate.com` session cookie for its billing
-page and read-only account endpoints. Automatic mode reuses a validated local
-cookie before importing the browser session; manual mode accepts a Cookie
-header containing a nonempty `sessionid`. The provider reports this month's
+page and read-only account endpoints. Manual mode accepts a Cookie header containing a nonempty `sessionid`. The provider reports this month's
 spend and, when the optional balance request succeeds, prepaid credit balance.
 It keeps those values in the cost/detail surfaces and does not invent a quota
 percentage or use a Replicate API token as a website credential.
@@ -168,9 +159,7 @@ percentage or use a Replicate API token as a website credential.
 Charm Hyper is disabled by default. It reads
 `GET https://hyper.charm.land/v1/credits` and shows one **Hypercredits** detail
 row in native HC units; it never infers a quota percentage, plan, reset or
-spend. The cookie source only picks the session: Automatic imports the
-`hyper.charm.land` session from the selected browser, Manual uses a pasted
-Cookie header, and Disabled uses only the API key. The usage source keeps
+spend. Manual uses a pasted `hyper.charm.land` Cookie header, and Disabled uses only the API key. The usage source keeps
 routing. Auto prefers the session and falls back to the API key (the saved key,
 then `HYPER_API_KEY`) when there is no session, the session request fails, or
 the session is rejected (401, 403, a redirect or an HTML sign-in page).
@@ -185,13 +174,7 @@ Langdock is disabled by default and has no API key. It reads the signed-in web
 app: `GET https://app.langdock.com/api/trpc/usageSettings.getPersonalUsage`
 (tRPC batch input) with the `auth_token` session cookie.
 
-- The cookie source in Settings → Providers → Langdock picks the session and
-  defaults to Automatic. Automatic and Manual first use a header imported under
-  Browser Cookies (from the browser you choose) or pasted there. Without one,
-  Automatic uses the first detected browser whose `langdock.com` cookies hold
-  `auth_token` (browsers with only other cookies are skipped) and Manual fails
-  closed. Off reads nothing. A header without `auth_token` never sends a
-  request.
+- In Settings → Providers → Langdock, paste a manual Cookie header for web usage. The header must contain `auth_token`. Off disables the session.
 - The card shows Session (5 hours) and Weekly percentages with their resets.
   A plan without session limits shows the weekly lane alone, labelled Weekly.
   A workspace without included limits shows one "Included limits" row with
@@ -207,12 +190,7 @@ signed-in console at `https://console.lithosai.cloud` with both session cookies,
 `__Host-console_session` and `__Host-console_csrf`; the CSRF value is echoed as
 `X-Console-Csrf`. A header missing either cookie never sends a request.
 
-- The cookie source in Settings → Providers → LithosAI picks the session and
-  defaults to Automatic. Automatic and Manual first use a header imported under
-  Browser Cookies (from the browser you choose) or pasted there. Without one,
-  Automatic tries each detected browser holding both `console.lithosai.cloud`
-  cookies, in order, and moves to the next after a 401; Manual fails closed
-  and a pasted header is never swapped for a browser session. Off reads nothing.
+- In Settings → Providers → LithosAI, paste a manual Cookie header for web usage. Off disables the session.
 - Requests, in order: `GET /api/me` (active organization, email), then
   `GET /api/billing` and `GET /api/billing/spend?start=YYYY-MM-01&end=YYYY-MM-DD`
   (UTC month to date), both with `X-Organization-Id`.
@@ -237,11 +215,7 @@ reads the `muse` CLI login. It is disabled by default and has no usage API, so
 it posts the settings dialog's Next.js server action `fetchSubscriptionAction`
 to `https://muse.ai/` with the session cookies and `Sec-Fetch-*` headers.
 
-- The cookie source in Settings → Providers → Muse (muse.ai) picks the session
-  and defaults to Automatic. Automatic and Manual first use a header imported
-  under Browser Cookies (from the browser you choose) or pasted there. Without
-  one, Automatic reads the `muse.ai` cookies from the first detected browser
-  that has them and Manual fails closed. Off reads nothing.
+- In Settings → Providers → Muse (muse.ai), paste a manual Cookie header for web usage. Off disables the session.
 - The action ID changes on every deploy. A `404 Server action not found.`
   starts a bounded discovery: the signed-in page's chunks (at most 96, eight
   at a time, 8 MiB in total) lead to the lazy settings module, whose chunks
@@ -260,17 +234,10 @@ TinyApi reads available credit balance from the signed-in dashboard using
 Cookie header. The response returns a JSON object with a `data.totalAvailable`
 field containing the available credits as a number.
 
-- The cookie source in Settings → Providers → TinyApi picks the session and
-  defaults to Automatic. Automatic imports the `tinyapi.rest` cookies from the
-  browser you select (Chrome, Edge, Brave, Firefox); Manual accepts a pasted
-  Cookie header. Without an imported or pasted header, Automatic tries each
-  detected browser's `tinyapi.rest` cookies in turn, and Manual fails closed.
-  Off reads nothing.
+- In Settings → Providers → TinyApi, paste a manual Cookie header for web usage. Off disables the session.
 - Requests send the Cookie header and expect a JSON response with `success: true`
   and `data.totalAvailable` as a finite non-negative number. HTTP 401 or 403
-  indicates an expired session; the provider skips to the next browser session
-  if Automatic has more candidates, and reports "TinyApi session expired. Sign
-  in again or paste a fresh Cookie header." if none remain. HTTP 429 is
+  indicates an expired session and requires a fresh Cookie header. HTTP 429 is
   rate-limited, and 500+ is unavailable. Other HTTP codes are reported with
   their status code. Bodies over 256 KiB or without a valid balance report a
   missing balance, and non-JSON bodies report invalid JSON. Response bodies and
@@ -290,12 +257,7 @@ disabled by default and reads the website billing API that the signed-in
 Plans & usage page (`https://www.workbuddy.cn/profile/plans-usage`) uses:
 `POST /billing/meter/get-user-resource-summary` with the session cookies.
 
-- The cookie source in Settings → Providers → WorkBuddy picks the session and
-  defaults to Automatic. Automatic and Manual first use a header imported under
-  Browser Cookies (from the browser you choose) or pasted there, with no
-  browser fallback. Without one, Automatic tries each detected browser's
-  `workbuddy.cn` session in turn (only the cookies a request to
-  `www.workbuddy.cn` would carry) and Manual fails closed. Off reads nothing.
+- In Settings → Providers → WorkBuddy, paste a manual Cookie header for web usage. Off disables the session.
 - WorkBuddy binds the session to the browser User-Agent. Requests send
   Chrome's reduced Windows User-Agent for the installed Chrome major (the
   newest version folder under the Chrome install, else the version in
@@ -316,11 +278,7 @@ Plans & usage page (`https://www.workbuddy.cn/profile/plans-usage`) uses:
   [official logo](https://assets.workbuddy.cn/web/workbuddy/a5b2fb510f0e7b156f19d072fae0cd12ae1f2f19/assets/logo.svg),
   in the app and in the `codexbar serve` dashboard. The `#0DC8A6` accent is
   unchanged.
-- HTTP 401 on every User-Agent moves on to the next browser session and is
-  reported as an expired session at the end, unless Automatic could not read
-  a browser (for example Chrome behind App-Bound Encryption): then that read
-  error is reported instead (App-Bound Encryption is also reported when no browser holds a session).
-  403, 429, server errors,
+- HTTP 401 on every User-Agent reports an expired session. HTTP 403, 429, server errors,
   non-zero API codes and malformed payloads stop at once. Response bodies and
   cookies are never logged or echoed in errors.
 
@@ -356,10 +314,7 @@ Muse Code reads its quota from the device-code login. When that response has no
 `subs_usage`, CodexBar can optionally read the quota of one dev.meta.ai team you
 select in Settings → Providers → Muse Code → **Browser team**.
 
-- The cookie source is **Off** by default. The Windows default ("Manual" with no
-  pasted cookie) also reads nothing, and never touches a browser.
-- **Automatic** imports the `llama_dev_sess` cookie from the selected browser.
-  **Manual** accepts a pasted Cookie header or cURL capture.
+- **Manual** accepts a pasted Cookie header or cURL capture containing the `llama_dev_sess` cookie. **Off** disables team quota collection.
 - Requests, in order: `GET /api/auth/me` (its email must match the login email,
   case-insensitively), `GET /api/portal/teams`, then
   `GET /api/portal/teams/{id}/subscription-quota` for the selected team only. The
@@ -549,13 +504,8 @@ portal in Settings → Providers → IBM Bob, as token accounts, or with
 ### X API prepaid credits
 
 X API is disabled by default and reads prepaid credit balances from the X
-(Twitter) API console. Sign in to console.x.com in your browser, and CodexBar
-will read the `auth_token` and `ct0` cookies from that session.
+(Twitter) API console using the Cookie header supplied in settings.
 
-- **Automatic:** A previously imported Cookie header is used on its own.
-  Otherwise CodexBar tries each detected browser (Chrome, Edge, Brave,
-  Firefox) holding both cookies. If a browser session expires (401), it moves
-  to the next browser. No session means sign in to console.x.com.
 - **Manual:** Paste the Cookie header from a console.x.com request (with
   `auth_token` and `ct0`). Manual mode does not fall back to browser sessions.
 - **Off:** Cookies are disabled.
@@ -567,21 +517,13 @@ The primary lane shows the balance (paid + free credits). Details rows show:
 
 Balance is a prepaid meter (no quota percentage); costs are always zero (no
 usage tracking available). The provider reports identity as "Browser session".
-Cost resets are never inferred. Session rotation on 401 is implemented: sessions
-are tried in browser order, stale sessions are skipped, and a missing session
-after all attempts triggers "sign in to console.x.com". Errors never echo
-response bodies.
+Cost resets are never inferred. A rejected session needs a fresh Cookie header. Errors never echo response bodies.
 
 ### Parallel
 
 Parallel is disabled by default and reads the prepaid account balance from the
-Parallel platform console. Sign in to platform.parallel.ai in your browser, and
-CodexBar will use that session's cookies.
+Parallel platform console using the Cookie header supplied in settings.
 
-- **Automatic:** A previously imported Cookie header is used on its own.
-  Otherwise CodexBar tries each detected browser (Chrome, Edge, Brave, Firefox)
-  holding a platform.parallel.ai session. If a session is signed out, it moves
-  to the next browser. No session means sign in to platform.parallel.ai.
 - **Manual:** Paste the Cookie header from a platform.parallel.ai request.
   Manual mode does not fall back to browser sessions.
 - **Off:** Cookies are disabled.
@@ -601,8 +543,6 @@ Origin: https://platform.parallel.ai
 - A signed-out response (401, 403, a redirect, or an HTML page) moves to the next
   session; when every session is signed out, CodexBar reports an expired session.
 - Malformed responses fail parsing without echoing the response body.
-- Parallel's upstream plugin reads only Chrome. This port uses the shared browser
-  order and the explicit browser selection in Preferences.
 
 ### fal
 
@@ -796,13 +736,8 @@ Claude Platform is disabled by default and shows the prepaid API credits of a
 Claude Console (platform.claude.com) organization, including the monthly API
 credit that Max plans include. It is separate from the Claude
 provider: it never reads Claude's cookies, OAuth credentials, plan or email.
-Sign in to platform.claude.com in your browser, and CodexBar uses that
-session's `sessionKey` cookie.
+Set a Cookie header containing the Console session in the provider settings.
 
-- **Automatic:** A previously imported Cookie header is used on its own.
-  Otherwise CodexBar tries each detected browser holding a platform.claude.com
-  `sessionKey`. If the Console rejects a session (401 or 403), it moves to the
-  next browser. No session means sign in to platform.claude.com.
 - **Manual:** Paste the Cookie header from a platform.claude.com request. It
   must contain `sessionKey`. Manual mode does not fall back to browser sessions.
 - **Off:** Cookies are disabled.
@@ -842,14 +777,8 @@ GET https://platform.claude.com/api/organizations/<uuid>/current_spend
 ### Trae CN
 
 Trae CN is disabled by default and shows the credit allowance of a Trae CN
-(trae.cn) account. Sign in to trae.cn in your browser, and CodexBar uses that
-session.
+(trae.cn) account using the Cookie header supplied in settings.
 
-- **Automatic:** Trae keeps its session cookies on the parent `trae.cn` domain,
-  so CodexBar reads the `trae.cn` cookies and sends only the ones a browser
-  would send to `api.trae.cn`. It tries each detected browser holding such a
-  session. If Trae rejects a session (401, 403 or a redirect), it moves to the
-  next browser. No session means sign in to trae.cn.
 - **Manual:** Paste the Cookie header from an api.trae.cn request. Manual mode
   does not fall back to browser sessions.
 - **Off:** Cookies are disabled.
@@ -1265,12 +1194,9 @@ Codex local cost prices **Priority (Fast)** turns at the Fast rate.
 - Models without a Fast rate stay Standard.
 - Older cost caches rebuild once. Codex cache schema v4 records each row's turn id.
 
-### Cursor app session
+### Cursor web usage
 
-Automatic mode first reads the signed-in Cursor app's `cursorAuth/accessToken` from `%APPDATA%\Cursor\User\globalStorage\state.vscdb` (read-only) and rebuilds the session cookie from it.
-
-- Cursor 3.27 and later may store that token as a `cursor-safe-storage:v1:` envelope. CodexBar decrypts it with the DPAPI-protected key in `%APPDATA%\Cursor\Local State` (AES-256-GCM, as Chromium does on Windows). A plain JWT never reads that key.
-- An unreadable, malformed or unknown-version envelope yields no app session, and Automatic mode falls through to browser cookies.
+Set a Cursor Cookie header in the provider settings.
 
 ### Cursor unified personal spend
 

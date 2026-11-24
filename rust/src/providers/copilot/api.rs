@@ -9,10 +9,6 @@ use crate::core::{NamedRateWindow, ProviderError, RateWindow, UsageSnapshot};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use serde_json::{Map, Value};
-use std::process::Command;
-
-#[cfg(windows)]
-use std::os::windows::process::CommandExt;
 
 const DEFAULT_GITHUB_HOST: &str = "github.com";
 const COPILOT_USAGE_PATH: &str = "/copilot_internal/user";
@@ -23,13 +19,6 @@ const GITHUB_USER_PATH: &str = "/user";
 /// renaming the id must fail loudly instead of silently disabling the
 /// fallback.
 pub const SEAT_CREDIT_WINDOW_ID: &str = "copilot-seat-credits";
-
-// Credential Manager targets to try
-const CREDENTIAL_TARGETS: &[&str] = &[
-    "codexbar-copilot",       // Our own storage
-    "git:https://github.com", // GitHub CLI / Git Credential Manager
-    "github.com",             // Alternative format
-];
 
 /// Basic GitHub identity for labeling OAuth token accounts.
 #[derive(Debug, Clone, Deserialize)]
@@ -111,102 +100,20 @@ impl CopilotApi {
         send_json(request, "GitHub identity endpoint").await
     }
 
-    /// Resolve the Copilot OAuth token from settings/legacy API key, GitHub
-    /// CLI auth, or the Windows Credential Manager fallback chain.
+    /// Resolve the Copilot token from settings or the active token account.
     pub fn load_token(
         &self,
         api_key: Option<&str>,
-        github_host: Option<&str>,
+        _github_host: Option<&str>,
     ) -> Result<String, ProviderError> {
         if let Some(key) = normalize_token(api_key) {
             tracing::debug!("Using Copilot token from settings or active token account");
             return Ok(key);
         }
 
-        if let Some(token) = load_gh_cli_token(github_host) {
-            tracing::debug!("Using Copilot token from GitHub CLI auth");
-            return Ok(token);
-        }
-
-        for target in CREDENTIAL_TARGETS {
-            if let Some(token) = self.try_load_credential(target)
-                && let Some(actual_token) = normalize_token(Some(&token))
-            {
-                tracing::debug!("Found Copilot token in credential target: {}", target);
-                return Ok(actual_token);
-            }
-        }
-
         Err(ProviderError::NotInstalled(
-            "GitHub Copilot token not found. Sign in with GitHub from Copilot settings, run 'gh auth login', or add a legacy GitHub token.".to_string(),
+            "GitHub Copilot token not found. Sign in with GitHub from Copilot settings or add a GitHub token.".to_string(),
         ))
-    }
-
-    #[cfg(target_os = "windows")]
-    fn try_load_credential(&self, target: &str) -> Option<String> {
-        use std::ffi::OsStr;
-        use std::os::windows::ffi::OsStrExt;
-        use windows::Win32::Security::Credentials::{
-            CRED_TYPE_GENERIC, CREDENTIALW, CredFree, CredReadW,
-        };
-        use windows::core::PCWSTR;
-
-        let target_wide: Vec<u16> = OsStr::new(target)
-            .encode_wide()
-            .chain(std::iter::once(0))
-            .collect();
-
-        let mut credential: *mut CREDENTIALW = std::ptr::null_mut();
-
-        // SAFETY: CredReadW is an FFI call that treats `target_wide` as a
-        // read-only null-terminated wide string (live for the call duration)
-        // and `credential` as an out-parameter; it is initialized to null and
-        // only written on success, and the returned status gates all use of it.
-        let result = unsafe {
-            CredReadW(
-                PCWSTR(target_wide.as_ptr()),
-                CRED_TYPE_GENERIC,
-                0,
-                &mut credential,
-            )
-        };
-
-        if result.is_err() {
-            return None;
-        }
-
-        // SAFETY: `credential` is valid here because CredReadW succeeded (the
-        // error case returned above). The CREDENTIALW and its CredentialBlob
-        // buffer are API-allocated and stay live until CredFree; the blob
-        // slice is bounded by CredentialBlobSize. CredFree runs on every path
-        // (early blob-less return and normal path) before `credential` goes out
-        // of scope, and `token` is an owned String, so no borrow outlives it.
-        let token = unsafe {
-            let cred = &*credential;
-            if cred.CredentialBlobSize == 0 || cred.CredentialBlob.is_null() {
-                CredFree(credential as *mut std::ffi::c_void);
-                return None;
-            }
-
-            let blob =
-                std::slice::from_raw_parts(cred.CredentialBlob, cred.CredentialBlobSize as usize);
-
-            let token = String::from_utf8_lossy(blob).to_string();
-            CredFree(credential as *mut std::ffi::c_void);
-            token
-        };
-
-        let trimmed = token.trim();
-        if !trimmed.is_empty() {
-            Some(trimmed.to_string())
-        } else {
-            None
-        }
-    }
-
-    #[cfg(not(target_os = "windows"))]
-    fn try_load_credential(&self, _target: &str) -> Option<String> {
-        None
     }
 }
 
@@ -686,33 +593,6 @@ fn normalize_token(raw: Option<&str>) -> Option<String> {
         None
     }
 }
-
-fn load_gh_cli_token(github_host: Option<&str>) -> Option<String> {
-    let host = github_host
-        .map(str::trim)
-        .filter(|host| !host.is_empty())
-        .unwrap_or(DEFAULT_GITHUB_HOST);
-    let mut command = Command::new("gh");
-    command.args(["auth", "token", "--hostname", host]);
-    hide_windows_console(&mut command);
-    let output = command.output().ok()?;
-
-    if !output.status.success() {
-        return None;
-    }
-
-    let token = String::from_utf8(output.stdout).ok()?;
-    normalize_token(Some(&token))
-}
-
-#[cfg(windows)]
-fn hide_windows_console(command: &mut Command) {
-    const CREATE_NO_WINDOW: u32 = 0x08000000;
-    command.creation_flags(CREATE_NO_WINDOW);
-}
-
-#[cfg(not(windows))]
-fn hide_windows_console(_command: &mut Command) {}
 
 fn parse_iso_date(s: &str) -> Option<DateTime<Utc>> {
     if let Ok(dt) = DateTime::parse_from_rfc3339(s) {

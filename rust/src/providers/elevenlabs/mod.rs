@@ -278,19 +278,13 @@ fn title_case_tier(tier: &str) -> String {
 
 fn resolve_api_key(
     explicit: Option<&str>,
-    credential_target: &str,
+    _credential_target: &str,
     env_names: &[&str],
 ) -> Result<String, ProviderError> {
     if let Some(key) = explicit
         && !key.trim().is_empty()
     {
         return Ok(key.trim().to_string());
-    }
-    if let Ok(entry) = keyring::Entry::new(credential_target, "api_key")
-        && let Ok(key) = entry.get_password()
-        && !key.trim().is_empty()
-    {
-        return Ok(key);
     }
     if let Some(key) = resolve_env_api_key(env_names, |name| std::env::var(name).ok()) {
         return Ok(key);

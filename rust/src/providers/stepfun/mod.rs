@@ -208,7 +208,6 @@ impl StepFunProvider {
                     && token_parts(token).refresh_token.is_some() =>
             {
                 let refreshed = self.refresh_token(token).await?;
-                self.persist_refreshed_token(&refreshed);
                 self.fetch_token_once(&refreshed)
                     .await
                     .map_err(|retry_error| {
@@ -258,14 +257,6 @@ impl StepFunProvider {
                 .as_ref()
                 .map(|token| token.raw.as_str()),
         ))
-    }
-
-    fn persist_refreshed_token(&self, token: &str) {
-        if let Ok(entry) = keyring::Entry::new(STEPFUN_CREDENTIAL_TARGET, "api_key")
-            && let Err(error) = entry.set_password(token)
-        {
-            tracing::debug!("Could not persist refreshed StepFun token: {error}");
-        }
     }
 
     async fn post_json<T: for<'de> Deserialize<'de>>(
@@ -530,19 +521,13 @@ impl Provider for StepFunProvider {
 
 fn resolve_token(
     explicit: Option<&str>,
-    credential_target: &str,
+    _credential_target: &str,
     env_names: &[&str],
 ) -> Result<String, ProviderError> {
     if let Some(key) = explicit
         && !key.trim().is_empty()
     {
         return Ok(key.trim().to_string());
-    }
-    if let Ok(entry) = keyring::Entry::new(credential_target, "api_key")
-        && let Ok(key) = entry.get_password()
-        && !key.trim().is_empty()
-    {
-        return Ok(key);
     }
     for env in env_names {
         if let Ok(key) = std::env::var(env)

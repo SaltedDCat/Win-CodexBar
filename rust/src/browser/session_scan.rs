@@ -1,27 +1,15 @@
-//! Lazy, one-browser-at-a-time cookie scan.
-//!
-//! Reading a browser's cookie store copies its SQLite database and, for
-//! Chromium browsers, decrypts every matching value with DPAPI/AES-GCM. The
-//! scan therefore reads the next browser only when the caller asks for another
-//! candidate, so a caller that accepts the first browser's session never
-//! touches the others. Callers that validate a session (an HTTP request) and
-//! see it rejected simply ask for the next candidate instead of being stuck
-//! with the first browser that holds any cookie for the domain.
-//!
-//! The scan is provider-agnostic: it knows browsers, domains and cookies, not
-//! what a valid session looks like.
+//! Iterate candidates from an injected cookie store.
 
 use super::cookies::{Cookie, CookieError, CookieExtractor, CookieRequestScope};
-use super::detection::{BrowserDetector, BrowserType, DetectedBrowser};
+use super::detection::{BrowserType, DetectedBrowser};
 
-/// Where browser installations and their cookies come from. The system store
-/// reads real browser profiles; tests substitute an in-memory store.
+/// Source of browser-shaped candidates for provider session selection.
+/// The built-in store is empty. Tests can supply in-memory candidates.
 pub trait BrowserCookieStore {
-    /// Installed browsers in scan order. Must be cheap: it only discovers
-    /// profile directories and never reads or decrypts cookies.
+    /// Browser descriptors in scan order.
     fn detect_browsers(&self) -> Vec<DetectedBrowser>;
 
-    /// Read (and decrypt) the cookies `browser` holds for `domain`.
+    /// Return cookies for the given descriptor and domain.
     fn read_cookies(
         &self,
         browser: &DetectedBrowser,
@@ -29,21 +17,21 @@ pub trait BrowserCookieStore {
     ) -> Result<Vec<Cookie>, CookieError>;
 }
 
-/// The real browser profiles on this machine (and the Windows host under WSL).
+/// Empty default store. Production credentials are supplied explicitly.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct SystemCookieStore;
 
 impl BrowserCookieStore for SystemCookieStore {
     fn detect_browsers(&self) -> Vec<DetectedBrowser> {
-        BrowserDetector::detect_all()
+        Vec::new()
     }
 
     fn read_cookies(
         &self,
-        browser: &DetectedBrowser,
+        _browser: &DetectedBrowser,
         domain: &str,
     ) -> Result<Vec<Cookie>, CookieError> {
-        CookieExtractor::extract_for_domain(browser, domain)
+        Err(CookieError::NotFound(domain.to_string()))
     }
 }
 
@@ -98,7 +86,7 @@ pub struct BrowserCookieScan<S: BrowserCookieStore = SystemCookieStore> {
 }
 
 impl BrowserCookieScan<SystemCookieStore> {
-    /// Scan the real browser profiles for `domains`.
+    /// Build a scan with no ambient browser credentials.
     pub fn new(domains: &[&str]) -> Self {
         Self::with_store(SystemCookieStore, domains)
     }

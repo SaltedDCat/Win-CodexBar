@@ -1,14 +1,14 @@
-//! Ollama session cookie normalization, recognition, and browser import.
+//! Ollama session cookie normalization and recognition.
 //!
 //! Extracted from `mod.rs`. Owns the cookie source enum, header normalization
 //! (cURL/Cookie: label stripping), session-cookie name recognition (AuthKit,
-//! NextAuth chunked), browser import + validated-cache reuse, and sign-in
+//! NextAuth chunked), and sign-in
 //! redirect detection.
 
 use reqwest::Url;
 
 use crate::browser::cookies::{Cookie, CookieExtractor};
-use crate::core::{FetchContext, ProviderError, ProviderId};
+use crate::core::{FetchContext, ProviderError};
 use crate::providers::strip_cookie_prefix;
 
 pub(super) const OLLAMA_COOKIE_DOMAIN: &str = "ollama.com";
@@ -68,10 +68,7 @@ pub(super) fn normalize_cookie_header(input: &str) -> Option<String> {
     }
 }
 
-/// Resolve cookies from manual cookies, validated cache, or browser import.
-///
-/// Upstream #2404: reuse the last validated browser session cookie header
-/// across refreshes until auth fails, then re-import.
+/// Normalize and validate the configured Cookie header.
 pub(super) fn resolve_cookie_source(
     ctx: &FetchContext,
 ) -> Result<OllamaCookieSource, ProviderError> {
@@ -90,41 +87,17 @@ pub(super) fn resolve_cookie_source(
         return Err(manual_cookie_header_empty_error());
     }
 
-    match resolve_browser_cookie_header(false)? {
-        Some(header) => Ok(OllamaCookieSource::Manual(header)),
-        None => Err(ProviderError::NoCookies),
-    }
+    Err(ProviderError::NoCookies)
 }
 
 pub(super) fn manual_cookie_header_empty_error() -> ProviderError {
     ProviderError::Other(
         concat!(
             "Ollama cookie source is Manual, but no cookie header is configured. ",
-            "Paste a Cookie header from https://ollama.com/settings, or set Cookie source to Auto."
+            "Paste a Cookie header in the provider settings."
         )
         .to_string(),
     )
-}
-
-/// After a successful web fetch, cache the validated browser/manual session header.
-pub(super) fn cache_validated_session_cookie(source: &OllamaCookieSource) {
-    use crate::browser::cookie_cache::CookieHeaderCache;
-    if let Some(header) =
-        source.header_for_url(&Url::parse("https://ollama.com/settings").expect("static url"))
-    {
-        let label = match source {
-            OllamaCookieSource::Manual(_) => "validated",
-            OllamaCookieSource::Browser(_) => "browser",
-        };
-        // Cache store is best-effort: a failed write just means the next fetch re-validates.
-        let _stored = CookieHeaderCache::store(ProviderId::Ollama, &header, label);
-    }
-}
-
-/// Clear cached session after auth failure so the next refresh re-imports.
-pub(super) fn invalidate_cached_session_cookie() {
-    use crate::browser::cookie_cache::CookieHeaderCache;
-    CookieHeaderCache::clear(ProviderId::Ollama);
 }
 
 /// Strip copied cURL cookie syntax (`-b …`, `--cookie …`, `-H …`) and the
@@ -140,60 +113,9 @@ pub(super) fn strip_curl_cookie_wrapper(raw: &str) -> &str {
     header.trim_matches('\'').trim_matches('"').trim()
 }
 
-/// Resolve a browser/session cookie header for Ollama.
-///
-/// When `force_reimport` is false, prefers the last validated cached header
-/// (upstream #2404). On force or cache miss, imports from the browser.
-pub(super) fn resolve_browser_cookie_header(
-    force_reimport: bool,
-) -> Result<Option<String>, ProviderError> {
-    use crate::browser::cookie_cache::CookieHeaderCache;
-
-    if !force_reimport
-        && let Some(cached) = CookieHeaderCache::load(ProviderId::Ollama)
-        && has_recognized_ollama_session_cookie(&cached.cookie_header)
-    {
-        return Ok(Some(cached.cookie_header));
-    }
-
-    let url = Url::parse("https://ollama.com/settings")
-        .map_err(|e| ProviderError::Other(e.to_string()))?;
-
-    // Upstream Win-CodexBar #426: the generic `browser_cookies_for_domain` helper
-    // stops at the FIRST installed browser that has *any* cookies for the domain,
-    // even if those cookies are stale/irrelevant (e.g. a consent or CDN cookie left
-    // behind in Chrome/Edge from a one-off visit) and don't include a recognized
-    // Ollama session cookie. That starves out a later browser (often Brave) that
-    // actually holds the logged-in session. Walk every detected browser ourselves
-    // and keep going until one yields a header with a recognized session cookie.
-    use crate::browser::cookies::CookieExtractor;
-    use crate::browser::detection::BrowserDetector;
-
-    let mut first_error = None;
-    for browser in BrowserDetector::detect_all() {
-        match CookieExtractor::extract_for_domain(&browser, OLLAMA_COOKIE_DOMAIN) {
-            Ok(cookies) => {
-                if let Some(header) = ollama_cookie_header_for_url(&cookies, &url) {
-                    return Ok(Some(header));
-                }
-            }
-            Err(error) => {
-                let error = crate::providers::map_browser_cookie_error(error);
-                if !matches!(error, ProviderError::NoCookies) && first_error.is_none() {
-                    first_error = Some(error);
-                }
-            }
-        }
-    }
-    if let Some(error) = first_error {
-        return Err(error);
-    }
-    Ok(None)
-}
-
 /// Return the header for the first cookie set (in order) that contains a
 /// recognized Ollama session cookie for `url`, skipping sets that decrypt
-/// fine but carry no usable session (see `resolve_browser_cookie_header`).
+/// fine but carry no usable session.
 fn first_recognized_cookie_header(
     mut cookie_sets: impl Iterator<Item = Vec<Cookie>>,
     url: &Url,
@@ -292,7 +214,7 @@ mod tests {
         };
         assert_eq!(
             error.to_string(),
-            "Ollama cookie source is Manual, but no cookie header is configured. Paste a Cookie header from https://ollama.com/settings, or set Cookie source to Auto."
+            "Ollama cookie source is Manual, but no cookie header is configured. Paste a Cookie header in the provider settings."
         );
     }
 

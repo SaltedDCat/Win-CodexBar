@@ -1,14 +1,11 @@
-//! Browser detection and cookie extraction for Windows and WSL
+//! Cookie types, local caches, and web probes.
 
+#[cfg(windows)]
 pub(crate) mod claude_desktop;
-pub mod cookie_cache;
 pub mod cookies;
 pub mod detection;
-pub mod leveldb;
 pub mod session_scan;
-pub mod storage_discovery;
 pub mod watchdog;
-pub mod wsl_paths;
 
 // Re-exports for future UI integration
 #[allow(

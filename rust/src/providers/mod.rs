@@ -487,13 +487,10 @@ pub(crate) fn browser_cookies_for_domain(
 /// Cookies for `domain` from one browser only, so a provider can avoid
 /// touching unrelated browsers (and their credential prompts).
 pub(crate) fn browser_cookies_from_browser(
-    browser_type: crate::browser::detection::BrowserType,
-    domain: &str,
+    _browser_type: crate::browser::detection::BrowserType,
+    _domain: &str,
 ) -> Result<Vec<crate::browser::cookies::Cookie>, crate::core::ProviderError> {
-    let browser = crate::browser::detection::BrowserDetector::detect(browser_type)
-        .ok_or(crate::core::ProviderError::NoCookies)?;
-    crate::browser::cookies::CookieExtractor::extract_for_domain(&browser, domain)
-        .map_err(map_browser_cookie_error)
+    Err(crate::core::ProviderError::NoCookies)
 }
 
 fn map_browser_cookie_error(
@@ -510,19 +507,13 @@ fn map_browser_cookie_error(
 
 pub(crate) fn resolve_api_key(
     explicit: Option<&str>,
-    credential_target: &str,
+    _credential_target: &str,
     env_names: &[&str],
 ) -> Result<String, crate::core::ProviderError> {
     if let Some(key) = explicit
         && !key.trim().is_empty()
     {
         return Ok(key.trim().to_string());
-    }
-    if let Ok(entry) = keyring::Entry::new(credential_target, "api_key")
-        && let Ok(key) = entry.get_password()
-        && !key.trim().is_empty()
-    {
-        return Ok(key);
     }
     for env in env_names {
         if let Ok(key) = std::env::var(env)

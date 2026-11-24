@@ -27,9 +27,6 @@ pub fn build_fetch_context(
     let active_token_cookie = token_override
         .as_ref()
         .and_then(|override_data| override_data.cookie_header.clone());
-    let defer_provider_browser_cookie_lookup = provider.owns_browser_cookie_resolution()
-        && active_token_cookie.is_none()
-        && stored_cookie.is_none();
     let active_token_env = token_override
         .as_ref()
         .and_then(|override_data| override_data.env_override.as_ref());
@@ -43,12 +40,7 @@ pub fn build_fetch_context(
     let has_opencodego_api_key = id == ProviderId::OpenCodeGo
         && api_key.as_deref().is_some_and(|key| !key.trim().is_empty());
 
-    // Providers whose cookies only enrich an API result keep the configured
-    // usage source. Off and the default manual-without-cookie state never read
-    // a browser; only Automatic imports one (`browser_cookie_import`).
     let cookies_only_enrich_usage = provider.cookies_only_enrich_usage();
-    let browser_cookie_import =
-        cookies_only_enrich_usage && matches!(cookie_source, "auto" | "browser" | "web");
     // #433: an explicitly selected, non-empty Claude manual cookie is
     // authoritative. Do not let an active OAuth token account silently
     // replace it; this keeps tray refresh behavior aligned with diagnose,
@@ -58,7 +50,7 @@ pub fn build_fetch_context(
         && stored_cookie
             .as_deref()
             .is_some_and(|cookie| !cookie.trim().is_empty());
-    let (mut source_mode, mut cookie_header, fails_closed_without_cookie) = if id
+    let (mut source_mode, cookie_header, fails_closed_without_cookie) = if id
         .cookie_domain()
         .is_none()
     {
@@ -87,7 +79,7 @@ pub fn build_fetch_context(
             (usage_source, None, false)
         }
     } else if cookies_only_enrich_usage {
-        let cookie_header = (cookie_source == "manual")
+        let cookie_header = (cookie_source != "off")
             .then(|| active_token_cookie.clone().or(stored_cookie))
             .flatten();
         (usage_source, cookie_header, false)
@@ -212,19 +204,12 @@ pub fn build_fetch_context(
             }
             // `browser` is accepted as a legacy alias from older settings.
             "auto" | "browser" | "web" => {
-                // Claude resolves its cached cookie and browser fallback inside
-                // the provider; other providers retain the shell fallback.
-                // A credential-lane provider's saved session is active only
-                // under `manual`, so Web must not pick it up here either.
+                // Keep legacy settings usable with a previously saved header.
+                // Credential-lane providers activate saved sessions in Manual.
                 let saved_session = active_token_cookie
                     .clone()
                     .filter(|_| !provider.owns_credential_lane_routing());
-                let cookie_header = saved_session.or(stored_cookie).or_else(|| {
-                    (!defer_provider_browser_cookie_lookup)
-                        .then(|| browser_cookie_header(id, settings))
-                        .flatten()
-                });
-                (usage_source, cookie_header, false)
+                (usage_source, saved_session.or(stored_cookie), false)
             }
             _ => (usage_source, stored_cookie, false),
         }
@@ -232,8 +217,8 @@ pub fn build_fetch_context(
 
     // Cookie-web providers (Cursor, OpenCode, …) reject SourceMode::Cli. The shell
     // historically mapped "manual + no cookie" to Cli, which surfaces as
-    // "Source mode 'Cli' not supported". Remap to Web and try browser cookies
-    // unless the user explicitly disabled cookies ("off"). Providers whose
+    // "Source mode 'Cli' not supported". Remap to Web unless the user
+    // disabled cookies ("off"). Providers whose
     // cookie source only scopes the session (Charm Hyper) or only enriches an
     // API result (Muse browser team quota) own this contract in the provider,
     // so the shell must not remap their source mode.
@@ -243,17 +228,6 @@ pub fn build_fetch_context(
         && !provider.cookie_source_scopes_session_only()
         && !cookies_only_enrich_usage
     {
-        // Providers that own browser cookie resolution try each browser's
-        // session themselves; a pre-resolved first-browser header would pin
-        // them to that browser.
-        if !defer_provider_browser_cookie_lookup
-            && cookie_header
-                .as_deref()
-                .map(str::trim)
-                .is_none_or(|s| s.is_empty())
-        {
-            cookie_header = browser_cookie_header(id, settings);
-        }
         source_mode = SourceMode::Web;
     }
 
@@ -325,7 +299,6 @@ pub fn build_fetch_context(
         auto_prefer_web: auto_prefer_web
             && !(id == ProviderId::OpenCodeGo
                 && token_account_kind == Some(crate::core::TokenAccountKind::ApiKey)),
-        browser_cookie_import,
         optional_details_enabled: settings.optional_details_enabled(id),
         live_usage_enabled: settings.live_usage_enabled(id),
         ..FetchContext::default()
@@ -343,19 +316,6 @@ pub fn token_account_session_is_passive(id: ProviderId, settings: &Settings) -> 
     }
     let usage_source = SourceMode::parse(settings.usage_source(id)).unwrap_or_default();
     !(settings.cookie_source(id) == "manual" && usage_source != SourceMode::OAuth)
-}
-
-/// Unscoped first-browser cookie read shared by both call sites above.
-/// Gemini never reaches this path: it owns browser cookie resolution
-/// (`owns_browser_cookie_resolution`), so `defer_provider_browser_cookie_lookup`
-/// suppresses this lookup and its web source reads cookies through
-/// `CookieRequestScope` inside the provider instead.
-fn browser_cookie_header(id: ProviderId, settings: &Settings) -> Option<String> {
-    provider_cookie_domain(id, settings).and_then(|domain| {
-        crate::browser::cookies::get_cookie_header(domain)
-            .ok()
-            .filter(|h| !h.is_empty())
-    })
 }
 
 fn provider_uses_oauth_without_cookies(id: ProviderId, usage_source: SourceMode) -> bool {

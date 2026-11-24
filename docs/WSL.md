@@ -26,9 +26,7 @@ CLI-only mode (no display server needed):
 
 When running inside WSL, CodexBar:
 
-- **Browser cookies**: Reads Windows browser data from `/mnt/c/Users/<you>/AppData/...`.
-  Chromium cookies encrypted with DPAPI cannot be decrypted from WSL automatically.
-  Use manual cookies (Settings → provider detail → Browser Cookies) or CLI-based provider auth instead.
+- **Web usage**: Uses manually supplied Cookie headers in Settings → Providers, where supported.
 - **Provider CLIs**: Works with `codex`, `claude`, `gemini` etc. installed inside WSL natively.
 - **Desktop shell**: Requires WSLg (Windows 11) or an X server. Falls back to CLI mode automatically.
 - **Notifications**: Uses `notify-send` in WSL. Falls back to logging if unavailable.

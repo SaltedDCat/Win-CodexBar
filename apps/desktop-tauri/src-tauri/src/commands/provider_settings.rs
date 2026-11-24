@@ -337,7 +337,10 @@ pub(crate) fn provider_cookie_source_lookup(
     settings: &Settings,
     provider_id: &str,
 ) -> Option<String> {
-    cookie_source_provider(provider_id).map(|id| settings.cookie_source(id).to_string())
+    cookie_source_provider(provider_id).map(|id| match settings.cookie_source(id) {
+        "off" => "off".to_string(),
+        _ => "manual".to_string(),
+    })
 }
 
 pub(crate) fn provider_cookie_source_set(
@@ -514,7 +517,7 @@ mod tests {
                 .into_iter()
                 .map(|option| option.value)
                 .collect();
-        assert_eq!(values, ["auto", "manual", "off"]);
+        assert_eq!(values, ["manual", "off"]);
     }
 
     #[test]
@@ -729,7 +732,6 @@ fn cookie_option(
     desc_key: Option<locale::LocaleKey>,
 ) -> CookieSourceOption {
     let label = match value {
-        "auto" => locale::get_text(lang, locale::LocaleKey::Automatic),
         "manual" => locale::get_text(lang, locale::LocaleKey::CookieSourceManual),
         "off" => locale::get_text(lang, locale::LocaleKey::ProviderDisabled),
         other => other.to_string(),
@@ -743,17 +745,11 @@ fn cookie_option(
     }
 }
 
-/// Returns the catalog of cookie source options for a given provider,
-/// mirroring the `egui` ComboBox choices in `preferences.rs`.
+/// Cookie source options supported by the provider.
 /// Empty vec means the provider does not expose a cookie-source picker.
 pub fn cookie_source_options_for(provider_id: &str, lang: Language) -> Vec<CookieSourceOption> {
     match provider_id {
         "codex" => vec![
-            cookie_option(
-                lang,
-                "auto",
-                Some(locale::LocaleKey::ProviderCodexAutoImportHelp),
-            ),
             cookie_option(
                 lang,
                 "manual",
@@ -761,32 +757,17 @@ pub fn cookie_source_options_for(provider_id: &str, lang: Language) -> Vec<Cooki
             ),
             cookie_option(lang, "off", Some(locale::LocaleKey::CookieHelpCodexOff)),
         ],
-        "claude" => vec![
-            cookie_option(
-                lang,
-                "auto",
-                Some(locale::LocaleKey::ProviderClaudeCookiesHelp),
-            ),
-            cookie_option(
-                lang,
-                "manual",
-                Some(locale::LocaleKey::ProviderClaudeCookiesHelp),
-            ),
-        ],
-        "cursor" => vec![
-            cookie_option(
-                lang,
-                "auto",
-                Some(locale::LocaleKey::ProviderCursorCookieSourceHelp),
-            ),
-            cookie_option(
-                lang,
-                "manual",
-                Some(locale::LocaleKey::CookieHelpCursorManual),
-            ),
-        ],
+        "claude" => vec![cookie_option(
+            lang,
+            "manual",
+            Some(locale::LocaleKey::ProviderClaudeCookiesHelp),
+        )],
+        "cursor" => vec![cookie_option(
+            lang,
+            "manual",
+            Some(locale::LocaleKey::CookieHelpCursorManual),
+        )],
         "grok" => vec![
-            cookie_option(lang, "auto", Some(locale::LocaleKey::CookieHelpGrokAuto)),
             cookie_option(
                 lang,
                 "manual",
@@ -794,40 +775,22 @@ pub fn cookie_source_options_for(provider_id: &str, lang: Language) -> Vec<Cooki
             ),
             cookie_option(lang, "off", Some(locale::LocaleKey::CookieHelpGrokOff)),
         ],
-        "opencode" => vec![
-            cookie_option(
-                lang,
-                "auto",
-                Some(locale::LocaleKey::CookieHelpOpenCodeAuto),
-            ),
-            cookie_option(
-                lang,
-                "manual",
-                Some(locale::LocaleKey::CookieHelpOpenCodeManual),
-            ),
-        ],
-        "factory" => vec![
-            cookie_option(lang, "auto", Some(locale::LocaleKey::CookieHelpFactoryAuto)),
-            cookie_option(
-                lang,
-                "manual",
-                Some(locale::LocaleKey::CookieHelpFactoryManual),
-            ),
-        ],
-        "alibaba" | "alibabatokenplan" => vec![
-            cookie_option(lang, "auto", Some(locale::LocaleKey::CookieHelpAlibabaAuto)),
-            cookie_option(
-                lang,
-                "manual",
-                Some(locale::LocaleKey::CookieHelpAlibabaManual),
-            ),
-        ],
+        "opencode" => vec![cookie_option(
+            lang,
+            "manual",
+            Some(locale::LocaleKey::CookieHelpOpenCodeManual),
+        )],
+        "factory" => vec![cookie_option(
+            lang,
+            "manual",
+            Some(locale::LocaleKey::CookieHelpFactoryManual),
+        )],
+        "alibaba" | "alibabatokenplan" => vec![cookie_option(
+            lang,
+            "manual",
+            Some(locale::LocaleKey::CookieHelpAlibabaManual),
+        )],
         "kimi" | "kimik2" => vec![
-            cookie_option(
-                lang,
-                "auto",
-                Some(locale::LocaleKey::CookieHelpAutoBrowserCookies),
-            ),
             cookie_option(
                 lang,
                 "manual",
@@ -835,56 +798,32 @@ pub fn cookie_source_options_for(provider_id: &str, lang: Language) -> Vec<Cooki
             ),
             cookie_option(lang, "off", Some(locale::LocaleKey::CookieHelpKimiOff)),
         ],
-        "minimax" => vec![
-            cookie_option(lang, "auto", Some(locale::LocaleKey::CookieHelpMiniMaxAuto)),
-            cookie_option(
-                lang,
-                "manual",
-                Some(locale::LocaleKey::CookieHelpMiniMaxManual),
-            ),
-        ],
-        "augment" => vec![
-            cookie_option(
-                lang,
-                "auto",
-                Some(locale::LocaleKey::CookieHelpAutoBrowserCookies),
-            ),
-            cookie_option(
-                lang,
-                "manual",
-                Some(locale::LocaleKey::CookieHelpAugmentManual),
-            ),
-        ],
-        "amp" => vec![
-            cookie_option(
-                lang,
-                "auto",
-                Some(locale::LocaleKey::CookieHelpAutoBrowserCookies),
-            ),
-            cookie_option(lang, "manual", Some(locale::LocaleKey::CookieHelpAmpManual)),
-        ],
-        "ollama" => vec![
-            cookie_option(
-                lang,
-                "auto",
-                Some(locale::LocaleKey::CookieHelpAutoBrowserCookies),
-            ),
-            cookie_option(
-                lang,
-                "manual",
-                Some(locale::LocaleKey::CookieHelpOllamaManual),
-            ),
-        ],
-        "mistral" => vec![
-            cookie_option(lang, "auto", Some(locale::LocaleKey::CookieHelpMistralAuto)),
-            cookie_option(
-                lang,
-                "manual",
-                Some(locale::LocaleKey::CookieHelpMistralManual),
-            ),
-        ],
+        "minimax" => vec![cookie_option(
+            lang,
+            "manual",
+            Some(locale::LocaleKey::CookieHelpMiniMaxManual),
+        )],
+        "augment" => vec![cookie_option(
+            lang,
+            "manual",
+            Some(locale::LocaleKey::CookieHelpAugmentManual),
+        )],
+        "amp" => vec![cookie_option(
+            lang,
+            "manual",
+            Some(locale::LocaleKey::CookieHelpAmpManual),
+        )],
+        "ollama" => vec![cookie_option(
+            lang,
+            "manual",
+            Some(locale::LocaleKey::CookieHelpOllamaManual),
+        )],
+        "mistral" => vec![cookie_option(
+            lang,
+            "manual",
+            Some(locale::LocaleKey::CookieHelpMistralManual),
+        )],
         "notion" => vec![
-            cookie_option(lang, "auto", Some(locale::LocaleKey::CookieHelpNotionAuto)),
             cookie_option(
                 lang,
                 "manual",
@@ -893,7 +832,6 @@ pub fn cookie_source_options_for(provider_id: &str, lang: Language) -> Vec<Cooki
             cookie_option(lang, "off", Some(locale::LocaleKey::CookieHelpNotionOff)),
         ],
         "muse" => vec![
-            cookie_option(lang, "auto", Some(locale::LocaleKey::CookieHelpMuseAuto)),
             cookie_option(
                 lang,
                 "manual",
@@ -901,24 +839,12 @@ pub fn cookie_source_options_for(provider_id: &str, lang: Language) -> Vec<Cooki
             ),
             cookie_option(lang, "off", Some(locale::LocaleKey::CookieHelpMuseOff)),
         ],
-        "replicate" => vec![
-            cookie_option(
-                lang,
-                "auto",
-                Some(locale::LocaleKey::CookieHelpReplicateAuto),
-            ),
-            cookie_option(
-                lang,
-                "manual",
-                Some(locale::LocaleKey::CookieHelpReplicateManual),
-            ),
-        ],
+        "replicate" => vec![cookie_option(
+            lang,
+            "manual",
+            Some(locale::LocaleKey::CookieHelpReplicateManual),
+        )],
         "raycast" => vec![
-            cookie_option(
-                lang,
-                "auto",
-                Some(locale::LocaleKey::ProviderRaycastAutoImportHelp),
-            ),
             cookie_option(
                 lang,
                 "manual",
@@ -930,34 +856,17 @@ pub fn cookie_source_options_for(provider_id: &str, lang: Language) -> Vec<Cooki
                 Some(locale::LocaleKey::ProviderRaycastCookiesDisabled),
             ),
         ],
-        "helmcode" => vec![
-            cookie_option(
-                lang,
-                "auto",
-                Some(locale::LocaleKey::CookieHelpHelmcodeAuto),
-            ),
-            cookie_option(
-                lang,
-                "manual",
-                Some(locale::LocaleKey::CookieHelpHelmcodeManual),
-            ),
-        ],
-        "typesafe" => vec![
-            cookie_option(
-                lang,
-                "auto",
-                Some(locale::LocaleKey::CookieHelpTypeSafeAuto),
-            ),
-            cookie_option(
-                lang,
-                "manual",
-                Some(locale::LocaleKey::CookieHelpTypeSafeManual),
-            ),
-        ],
-        // Upstream's Hyper picker; the session can come from any selected
-        // browser here, not only Chrome.
+        "helmcode" => vec![cookie_option(
+            lang,
+            "manual",
+            Some(locale::LocaleKey::CookieHelpHelmcodeManual),
+        )],
+        "typesafe" => vec![cookie_option(
+            lang,
+            "manual",
+            Some(locale::LocaleKey::CookieHelpTypeSafeManual),
+        )],
         "hyper" => vec![
-            cookie_option(lang, "auto", Some(locale::LocaleKey::CookieHelpHyperAuto)),
             cookie_option(
                 lang,
                 "manual",
@@ -965,74 +874,43 @@ pub fn cookie_source_options_for(provider_id: &str, lang: Language) -> Vec<Cooki
             ),
             cookie_option(lang, "off", Some(locale::LocaleKey::CookieHelpHyperOff)),
         ],
-        // Upstream reads the console session from the browser only; manual
-        // keeps a pasted `stytch_session` header for browsers whose cookies
-        // Windows cannot decrypt.
         "groq" => vec![
-            cookie_option(lang, "auto", None),
             cookie_option(lang, "manual", None),
             cookie_option(lang, "off", None),
         ],
-        // Upstream picks one Edge profile instead; Windows uses the shared
-        // cookie-source choices: automatic browser import, a pasted header, or off.
         "langdock" => vec![
-            cookie_option(lang, "auto", None),
             cookie_option(lang, "manual", None),
             cookie_option(lang, "off", None),
         ],
-        // Upstream's LithosAI cookie source: automatic browser import,
-        // a pasted header, or off.
         "lithosai" => vec![
-            cookie_option(lang, "auto", None),
             cookie_option(lang, "manual", None),
             cookie_option(lang, "off", None),
         ],
-        // Upstream's Muse (muse.ai) cookie source: automatic browser import,
-        // a pasted header, or off.
         "museai" => vec![
-            cookie_option(lang, "auto", None),
             cookie_option(lang, "manual", None),
             cookie_option(lang, "off", None),
         ],
-        // Upstream's WorkBuddy cookie source: automatic browser import,
-        // a pasted header, or off.
         "workbuddy" => vec![
-            cookie_option(lang, "auto", None),
             cookie_option(lang, "manual", None),
             cookie_option(lang, "off", None),
         ],
-        // Upstream's TinyApi cookie source: automatic browser import,
-        // a pasted header, or off.
         "tinyapi" => vec![
-            cookie_option(lang, "auto", None),
             cookie_option(lang, "manual", None),
             cookie_option(lang, "off", None),
         ],
-        // X API cookie source: automatic browser import,
-        // a pasted header, or off.
         "xapi" => vec![
-            cookie_option(lang, "auto", None),
             cookie_option(lang, "manual", None),
             cookie_option(lang, "off", None),
         ],
-        // Upstream's Parallel picker (Chrome only there); this port offers the
-        // shared browser order: automatic browser import, a pasted header, or off.
         "parallel" => vec![
-            cookie_option(lang, "auto", None),
             cookie_option(lang, "manual", None),
             cookie_option(lang, "off", None),
         ],
-        // Upstream's Claude Platform picker: automatic browser import, a
-        // pasted platform.claude.com header, or off.
         "claudeplatform" => vec![
-            cookie_option(lang, "auto", None),
             cookie_option(lang, "manual", None),
             cookie_option(lang, "off", None),
         ],
-        // Upstream's Trae CN picker: automatic browser import, a pasted
-        // api.trae.cn Cookie header, or off.
         "traecn" => vec![
-            cookie_option(lang, "auto", None),
             cookie_option(lang, "manual", None),
             cookie_option(lang, "off", None),
         ],

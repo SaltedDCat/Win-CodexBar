@@ -165,6 +165,11 @@ pub fn set_manual_cookie(
     let mut cookies = ManualCookies::load();
     cookies.set(id.cli_name(), cookie_header.trim());
     cookies.save().map_err(|e| e.to_string())?;
+    let mut settings = Settings::load();
+    if matches!(settings.cookie_source(id), "auto" | "browser" | "web") {
+        settings.set_cookie_source(id, "manual");
+        settings.save().map_err(|e| e.to_string())?;
+    }
     Ok(get_manual_cookies())
 }
 

@@ -1,9 +1,7 @@
 use super::{
-    AccountResponse, ClaudeWebApiFetcher, UsageWindow, classify_web_http_error, cookie_value,
-    describe_json_body_shape, is_cookie_authentication_failure,
+    AccountResponse, ClaudeWebApiFetcher, UsageWindow, cookie_value, describe_json_body_shape,
 };
-use crate::core::{CostSnapshot, ProviderError, UsageSnapshot};
-use reqwest::StatusCode;
+use crate::core::{CostSnapshot, UsageSnapshot};
 use reqwest::header;
 use std::sync::{Mutex, OnceLock};
 
@@ -133,23 +131,6 @@ fn build_headers_include_required_browser_context() {
         );
     }
     assert!(headers.contains_key(header::USER_AGENT));
-}
-
-#[test]
-fn stale_cookie_recovery_retries_only_after_authentication_failure() {
-    assert!(is_cookie_authentication_failure(
-        &ProviderError::AuthRequired
-    ));
-    assert!(!is_cookie_authentication_failure(&ProviderError::Timeout));
-    assert!(!is_cookie_authentication_failure(&ProviderError::Other(
-        "Failed to get organizations: 503 Service Unavailable".to_string(),
-    )));
-    assert!(!is_cookie_authentication_failure(&classify_web_http_error(
-        "organizations",
-        StatusCode::FORBIDDEN,
-        &header::HeaderMap::new(),
-        b"Just a moment...",
-    )));
 }
 
 #[test]

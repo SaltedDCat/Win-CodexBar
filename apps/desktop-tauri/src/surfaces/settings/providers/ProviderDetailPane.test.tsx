@@ -320,12 +320,4 @@ describe("ProviderDetailPane", () => {
     expect(screen.queryByText("Codex")).toBeNull();
   });
 
-  it("locks Avoid keychain prompts while Credential Manager access is disabled", async () => {
-    tauri.getProviderDetail.mockResolvedValue(detail("claude"));
-    const settings = { ...baseSettings, disableKeychainAccess: true } as SettingsSnapshot;
-    const { container } = await renderPane("claude", settings);
-    const options = container.querySelector(".provider-options-group") as HTMLElement;
-    const row = within(options).getByText("ProviderClaudeAvoidKeychainPrompts").closest(".settings-field") as HTMLElement;
-    expect(within(row).getByRole("checkbox")).toBeDisabled();
-  });
 });

@@ -1,10 +1,8 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const tauriMocks = vi.hoisted(() => ({
   getManualCookies: vi.fn(),
-  importBrowserCookies: vi.fn(),
-  listDetectedBrowsers: vi.fn(),
   removeManualCookie: vi.fn(),
   setManualCookie: vi.fn(),
 }));
@@ -22,58 +20,23 @@ function renderSection() {
   );
 }
 
-describe("CookieSection browser detection", () => {
+describe("CookieSection", () => {
   beforeEach(() => {
-    tauriMocks.getManualCookies.mockReset();
+    vi.clearAllMocks();
     tauriMocks.getManualCookies.mockResolvedValue([]);
-    tauriMocks.listDetectedBrowsers.mockReset();
   });
 
-  it("explains that no browser was found and keeps the paste box", async () => {
-    tauriMocks.listDetectedBrowsers.mockResolvedValue([]);
+  it("saves a pasted Cookie header", async () => {
+    tauriMocks.setManualCookie.mockResolvedValue([]);
     renderSection();
 
-    expect(
-      await screen.findByText("NoBrowsersDetectedHint"),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "BrowserCookieImportFromBrowser" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByPlaceholderText("BrowserCookiePlaceholderDefault"),
-    ).toBeInTheDocument();
-  });
+    const input = await screen.findByPlaceholderText("BrowserCookiePlaceholderDefault");
+    expect(screen.queryByText("BrowserCookieImportFromBrowser")).not.toBeInTheDocument();
 
-  it("offers browser import and no empty-state hint when browsers exist", async () => {
-    tauriMocks.listDetectedBrowsers.mockResolvedValue([
-      { browserType: "chrome", displayName: "Google Chrome", profileCount: 1 },
-    ]);
-    renderSection();
-
-    expect(
-      await screen.findByRole("button", {
-        name: "BrowserCookieImportFromBrowser",
-      }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByText("NoBrowsersDetectedHint"),
-    ).not.toBeInTheDocument();
-  });
-
-  it("does not claim no browsers exist when the lookup fails", async () => {
-    tauriMocks.listDetectedBrowsers.mockRejectedValue(new Error("ipc down"));
-    renderSection();
-
+    fireEvent.change(input, { target: { value: "session=example" } });
+    fireEvent.click(screen.getByRole("button", { name: "BrowserCookieSave" }));
     await waitFor(() =>
-      expect(tauriMocks.listDetectedBrowsers).toHaveBeenCalledTimes(1),
+      expect(tauriMocks.setManualCookie).toHaveBeenCalledWith("codex", "session=example"),
     );
-    await waitFor(() =>
-      expect(
-        screen.getByPlaceholderText("BrowserCookiePlaceholderDefault"),
-      ).toBeInTheDocument(),
-    );
-    expect(
-      screen.queryByText("NoBrowsersDetectedHint"),
-    ).not.toBeInTheDocument();
   });
 });

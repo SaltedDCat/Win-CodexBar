@@ -6,7 +6,7 @@ This page shows how Win-CodexBar is put together: the crates, the windows, and h
 
 | Area | Path | Role |
 | --- | --- | --- |
-| Shared backend and CLI | `rust/` (crate `codexbar`) | Providers, settings, browser cookies, tray icon pixels, the CLI |
+| Shared backend and CLI | `rust/` (crate `codexbar`) | Providers, settings, manual cookies, tray icon pixels, the CLI |
 | Desktop shell | `apps/desktop-tauri/src-tauri/` (crate `codexbar-desktop-tauri`) | Tauri 2 host: tray, windows, commands, float bar, proof harness |
 | Frontend | `apps/desktop-tauri/src/` | React 18 and Vite: tray panel, Settings, float bar |
 
@@ -102,7 +102,7 @@ The CLI uses the same provider factory and the same settings stores as the app. 
 ## Platform notes
 
 - Rust edition 2024. The CLI and the shell use Tokio.
-- Windows-only parts: DPAPI cookie decryption, the dark DWM caption, tray icon promotion, start at login under `HKCU\...\Run`, and WebView2.
+- Windows-only parts: DPAPI protection of local settings and credentials, the dark DWM caption, tray icon promotion, start at login under `HKCU\...\Run`, and WebView2.
 - Test tray, DPAPI and cookie behavior on Windows. WSL can't decrypt DPAPI data. See [WSL.md](./WSL.md).
 
 ## Related docs
@@ -111,6 +111,6 @@ The CLI uses the same provider factory and the same settings stores as the app. 
 - [CLI.md](./CLI.md): the command-line tool.
 - [CONFIGURATION.md](./CONFIGURATION.md): settings files and the Settings window.
 - [PROVIDERS.md](./PROVIDERS.md): providers, sign-in sources, windows and pace.
-- [COOKIES.md](./COOKIES.md): browser cookie import.
+- [COOKIES.md](./COOKIES.md): manual Cookie headers.
 - [WINDOWS_PROOF.md](./WINDOWS_PROOF.md): proving UI changes.
 - [AGENTS.md](../AGENTS.md): rules for agents and contributors.

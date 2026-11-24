@@ -44,16 +44,16 @@ Releases are not signed yet. SignPath.io is set up in the GitHub Actions release
 2. Click the tray icon to open the tray panel.
 3. Open **Settings > Providers** from the tray menu.
 4. Turn on the providers you use. A new install turns on Claude and Codex.
-5. Add the credential each provider needs: an OAuth or device login, an API key, browser cookies, a local CLI login or a token account.
+5. Add the credential each provider needs: an OAuth or device login, an API key, a manually supplied Cookie header, a local CLI login or a token account.
 
-For Claude, browser cookies (the `sessionKey`) are preferred, because they match the usage on Claude's settings page. OAuth and the CLI are fallbacks. For CLI-based providers such as Codex and Gemini, sign in with that provider's CLI first.
+For Claude, a manually supplied `sessionKey` is preferred, because they match the usage on Claude's settings page. OAuth and the CLI are fallbacks. For CLI-based providers such as Codex and Gemini, sign in with that provider's CLI first.
 
 ## What the app does
 
 - **Tray panel.** Left-click the tray icon, or press `Ctrl+Shift+U`, to open a light panel in the Mac style. It shows one card per provider. Each card has a metric row per usage window, with a bar, the reset time and, when the provider supports it, a pace line such as "10% in deficit · Runs out in 9d 8h".
 - **Tray icon.** The icon shows bars or a percentage for one provider, or two providers stacked. With **Color Pace Indicator** on, it turns green when you are behind pace and red when you are ahead.
 - **Float bar.** An optional always-on-top strip with the same usage.
-- **Providers.** More than 100 providers, including Codex, Claude, Copilot, OpenRouter, Cursor, Gemini, DeepSeek, MiniMax, Kiro, Antigravity, Groq, Qoder and Sakana AI. Each provider has its own source, credentials, cookie import, token accounts, API keys and region settings.
+- **Providers.** More than 100 providers, including Codex, Claude, Copilot, OpenRouter, Cursor, Gemini, DeepSeek, MiniMax, Kiro, Antigravity, Groq, Qoder and Sakana AI. Each provider has its own source, credentials, manual cookies, token accounts, API keys and region settings.
 - **Settings.** A window with a sidebar: General, Usage & Spend, Notifications, Menu Bar, Menu, Advanced, Hooks and About, then the Providers section with one page per provider. Each provider row has a status dot.
 - **Provider status pages.** With **Check provider status** on (the default), the app polls the status pages of providers such as OpenAI, Claude, Copilot, Cursor and Gemini. An incident colors that provider's dot in Settings and adds a line to the tray panel and the tray tooltip.
 - **Per-provider quota warnings.** Each provider can use the global warning thresholds, its own thresholds, or none.
@@ -95,8 +95,8 @@ For Claude, browser cookies (the `sessionKey`) are preferred, because they match
 | Ollama | Cookies / API Key | Usage, Cloud Models, Pace windows |
 | Azure OpenAI | API Key | Deployment |
 | T3 Chat | Cookies / cURL | Base, Overage |
-| TinyApi | Browser cookies / manual Cookie header | Available credits |
-| TypeSafe | Browser cookies / manual Cookie header | Billing-cycle spend, balance, expiring credits |
+| TinyApi | Manual Cookie header | Available credits |
+| TypeSafe | Manual Cookie header | Billing-cycle spend, balance, expiring credits |
 | OpenRouter | API Key | Credits |
 | JetBrains AI | Local Config | Usage |
 | Alibaba | Cookies | Usage |
@@ -121,7 +121,7 @@ For Claude, browser cookies (the `sessionKey`) are preferred, because they match
 | Venice | API Key / Web session | USD / DIEM Balance, Bundled credits (web session expires in about 60 s) |
 | OpenAI | Admin API / API Key | Usage, Requests, Project-scoped cost, Credit Balance |
 | Grok | Cookies / auth.json | Billing |
-| Helmcode (also NaN Builders) | Browser cookies / manual Cookie header | Per-model token quotas, reset windows, Helmcode prepaid balance |
+| Helmcode (also NaN Builders) | Manual Cookie header | Per-model token quotas, reset windows, Helmcode prepaid balance |
 | Raycast | Cookies (browser auto or manual) | Monthly AI credits, plan, renewal |
 | Replicate | Cookies / token accounts | Monthly spend, credit balance |
 | Aixy | API Key / token accounts | Applicable budget balances, 7-day key usage |
@@ -140,19 +140,19 @@ For Claude, browser cookies (the `sessionKey`) are preferred, because they match
 | Sofya | API Key | Available, plan and purchased credits, Monthly reset (free tier) |
 | Tavily | API Key | Account plan usage, API key usage, Pay-as-you-go credits |
 | Exa | API Key + Scope | Selected API key monthly spend (UTC) |
-| Langdock | Browser cookies / manual Cookie header | Session (5h), Weekly |
-| LithosAI | Browser cookies / manual Cookie header | Prepaid balance (Credits), UTC spend today and this month |
-| Muse (muse.ai) | Browser cookies / manual Cookie header | Weekly usage, tokens left, top-up tokens |
-| WorkBuddy | Browser cookies / manual Cookie header | Monthly credits left, plan, cycle reset |
-| X API | Browser cookies / manual Cookie header | Prepaid balance, purchased and free credits |
-| Parallel | Browser cookies / manual Cookie header | Prepaid account balance, pending debit |
+| Langdock | Manual Cookie header | Session (5h), Weekly |
+| LithosAI | Manual Cookie header | Prepaid balance (Credits), UTC spend today and this month |
+| Muse (muse.ai) | Manual Cookie header | Weekly usage, tokens left, top-up tokens |
+| WorkBuddy | Manual Cookie header | Monthly credits left, plan, cycle reset |
+| X API | Manual Cookie header | Prepaid balance, purchased and free credits |
+| Parallel | Manual Cookie header | Prepaid account balance, pending debit |
 | fal | API Key | Account credit balance |
 | FLORA | API Key + workspace ID | Workspace available balance, member limit, month-to-date spend |
 | Future AGI | API Key + secret key | Billing-period AI credits and gateway requests against free allowances, estimated cost |
 | Munito | Admin API Key | Today's and this month's organization spend against spend limits |
 | Soniox | Organization API key | Prepaid USD balance, this month's spend against the monthly budget, billing method |
-| Claude Platform | Browser cookies / manual Cookie header | Console API credit and purchased credit, other grants, month-to-date spend |
-| Trae CN | Browser cookies / manual Cookie header | Credit allowance used against total, remaining credits, plan name |
+| Claude Platform | Manual Cookie header | Console API credit and purchased credit, other grants, month-to-date spend |
+| Trae CN | Manual Cookie header | Credit allowance used against total, remaining credits, plan name |
 | Chatbox AI | License key | Remaining plan, reward, top-up and image quotas, plan name, plan reset and expiry |
 | abliteration.ai | API Key | Prepaid USD credits: remaining balance, used against total |
 
@@ -226,7 +226,7 @@ It builds the Tauri release binary and the console CLI, checks the installer dep
 ## Privacy
 
 - **Local by default.** The app reads provider data from known local paths or from provider APIs you set up.
-- **Cookies are opt-in.** The app reads browser cookies only for providers you turn on.
+- **Cookies are supplied manually.** Paste a Cookie header in the provider settings.
 - **Secrets are protected.** API keys, pasted cookies, token accounts and `settings.json` are stored through the secure-file layer, which uses DPAPI for the current Windows user.
 - **Diagnostics are safe to share.** They contain provider, source and status metadata only. They never contain cookies, API keys, bearer tokens or OAuth values.
 - **Updates are verified.** An update download needs a SHA-256 digest from GitHub and is checked again right before it is applied.

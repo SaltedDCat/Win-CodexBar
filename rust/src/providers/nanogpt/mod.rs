@@ -16,9 +16,6 @@ use crate::providers::http_util::StatusPolicy;
 /// NanoGPT API base URL
 const NANOGPT_API_BASE: &str = "https://nano-gpt.com/api/subscription/v1";
 
-/// Windows Credential Manager target for NanoGPT API token
-const NANOGPT_CREDENTIAL_TARGET: &str = "codexbar-nanogpt";
-
 /// NanoGPT subscription usage response
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -80,7 +77,7 @@ impl NanoGPTProvider {
         }
     }
 
-    /// Get API token from ctx, Windows Credential Manager, or env
+    /// Get API token from ctx, or env
     fn get_api_token(api_key: Option<&str>) -> Result<String, ProviderError> {
         if let Some(key) = api_key
             && !key.is_empty()
@@ -88,9 +85,7 @@ impl NanoGPTProvider {
             return Ok(key.to_string());
         }
 
-        keyring::Entry::new(NANOGPT_CREDENTIAL_TARGET, "api_token")
-            .and_then(|entry| entry.get_password())
-            .or_else(|_| std::env::var("NANOGPT_API_KEY"))
+        std::env::var("NANOGPT_API_KEY")
             .map_err(|_| {
                 ProviderError::NotInstalled(
                     "NanoGPT API key not found. Set in Preferences → Providers or NANOGPT_API_KEY environment variable.".to_string(),

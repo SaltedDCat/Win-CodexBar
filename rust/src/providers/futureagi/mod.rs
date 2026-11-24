@@ -27,7 +27,6 @@ use crate::core::{
 use crate::providers::{BoundedBodyError, format, read_bounded_response};
 
 const USAGE_URL: &str = "https://api.futureagi.com/usage/v2/usage-overview/";
-const CREDENTIAL_TARGET: &str = "codexbar-futureagi";
 pub const API_KEY_ENV: &str = "FI_API_KEY";
 pub const SECRET_KEY_ENV: &str = "FI_SECRET_KEY";
 const MAX_RESPONSE_BYTES: usize = 256 * 1024;
@@ -152,13 +151,7 @@ fn resolve_credentials(explicit: Option<&str>) -> Result<Credentials, ProviderEr
     // (`"KEY":"SECRET"` would corrupt into `KEY"` and `"SECRET`).
     let stored = explicit
         .filter(|value| cleaned_key(value).is_some())
-        .map(str::to_string)
-        .or_else(|| {
-            keyring::Entry::new(CREDENTIAL_TARGET, "api_key")
-                .ok()
-                .and_then(|entry| entry.get_password().ok())
-                .filter(|value| cleaned_key(value).is_some())
-        });
+        .map(str::to_string);
     credentials_from(stored.as_deref(), |name| std::env::var(name).ok())
         .ok_or_else(|| ProviderError::NotInstalled(MISSING_CREDENTIALS.into()))
 }

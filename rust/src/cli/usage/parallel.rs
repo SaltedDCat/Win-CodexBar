@@ -49,8 +49,8 @@ pub(super) const MAX_CONCURRENT_PROVIDER_FETCHES: usize = 3;
 ///   Claude credential refresh. Grok takes its own `CREDENTIAL_OPERATION`
 ///   (`providers/grok/accounts/refresh.rs:22,27`) around renewal and its store
 ///   write (`persist_renewed`, `:135`). Other writers are keyed per provider,
-///   such as the burndown history (`core/quota_burndown.rs:188-189`) and the
-///   cookie cache (`browser/cookie_cache.rs`). A command fetches each provider
+///   such as the burndown history (`core/quota_burndown.rs:188-189`).
+///   A command fetches each provider
 ///   once, so no two concurrent fetches share a store file.
 pub(super) async fn fetch_in_selection_order<I, T, F, Fut>(items: &[I], fetch: F) -> Vec<T>
 where

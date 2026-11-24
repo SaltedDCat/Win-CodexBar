@@ -14,7 +14,6 @@ import type {
   CodexSessionTurn,
   CodexToolOperation,
   CodexWorkspacesSessionUsage,
-  DetectedBrowserBridge,
   ProviderCatalogEntry,
   ProviderUsageSnapshot,
   QuotaWindowHistoryBridge,
@@ -59,7 +58,6 @@ export const PROOF_SCENARIO_NAMES = [
   "kpi-long-titles",
   "uk-regen-countdown",
   "claudeplatform",
-  "cookie-no-browsers",
   "vercel",
   "vercel-team-id-invalid",
   "kimi-bonus-credits",
@@ -102,7 +100,6 @@ export interface ProofScenario {
   /** Per-model rows in the Codex Usage & Spend contract; a null token count renders as unknown. */
   codexSpendModels?: SpendModelRow[];
   /** Browsers the cookie section detects; absent means the router's default pair. */
-  detectedBrowsers?: DetectedBrowserBridge[];
   /** Saved workspace, team or base-URL values by provider id; absent means none saved. */
   workspaceIds?: Record<string, string>;
   /** Error a workspace-value save rejects with, by provider id; absent means saves succeed. */
@@ -1243,18 +1240,6 @@ function vercelTeamIdInvalidScenario(now: Date): ProofScenario {
   };
 }
 
-/**
- * Default data on a machine with no importable browser, so the cookie section
- * shows its empty-state hint beside the paste box.
- */
-function cookieNoBrowsersScenario(now: Date): ProofScenario {
-  return {
-    ...defaultScenario(now),
-    name: "cookie-no-browsers",
-    detectedBrowsers: [],
-  };
-}
-
 /** Kimi on a lapsed plan, showing the "Bonus credits" rows beside the membership pool. */
 function kimiBonusCreditsScenario(now: Date): ProofScenario {
   return {
@@ -1360,7 +1345,6 @@ const BUILDERS: Record<ProofScenarioName, (now: Date) => ProofScenario> = {
   "kpi-long-titles": kpiLongTitlesScenario,
   "uk-regen-countdown": ukRegenCountdownScenario,
   claudeplatform: claudePlatformScenario,
-  "cookie-no-browsers": cookieNoBrowsersScenario,
   vercel: vercelScenario,
   "vercel-team-id-invalid": vercelTeamIdInvalidScenario,
   "kimi-bonus-credits": kimiBonusCreditsScenario,

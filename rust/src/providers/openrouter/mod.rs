@@ -39,9 +39,6 @@ const OPENROUTER_MANAGEMENT_ENV: &str = "OPENROUTER_MANAGEMENT_API_KEY";
 /// substitutes for the primary key when selecting an account for quota/balance.
 const MISSING_API_KEY_MESSAGE: &str = "Enter a regular API key or a Management API key in the API key field, or set OPENROUTER_API_KEY. In Settings, the optional Management API key field does not replace it.";
 
-/// Windows Credential Manager target for OpenRouter API token
-const OPENROUTER_CREDENTIAL_TARGET: &str = "codexbar-openrouter";
-
 /// Statuses that mean the credential itself was rejected.
 const AUTH_REJECTED: &[reqwest::StatusCode] = &[
     reqwest::StatusCode::UNAUTHORIZED,
@@ -166,7 +163,7 @@ impl OpenRouterProvider {
         Self
     }
 
-    /// Get API token from ctx, Windows Credential Manager, or env
+    /// Get API token from ctx, or env
     fn get_api_token(api_key: Option<&str>) -> Result<String, ProviderError> {
         if let Some(key) = api_key
             && !key.is_empty()
@@ -174,10 +171,8 @@ impl OpenRouterProvider {
             return Ok(key.to_string());
         }
 
-        keyring::Entry::new(OPENROUTER_CREDENTIAL_TARGET, "api_token")
+        std::env::var("OPENROUTER_API_KEY")
             .ok()
-            .and_then(|entry| entry.get_password().ok())
-            .or_else(|| std::env::var("OPENROUTER_API_KEY").ok())
             .ok_or_else(|| ProviderError::NotInstalled(MISSING_API_KEY_MESSAGE.to_string()))
     }
 

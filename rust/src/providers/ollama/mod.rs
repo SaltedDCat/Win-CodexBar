@@ -69,26 +69,8 @@ impl OllamaProvider {
         let start_url =
             Url::parse(OLLAMA_SETTINGS_URL).map_err(|e| ProviderError::Other(e.to_string()))?;
 
-        match fetch_settings_html_at(&client, &cookies, start_url.clone()).await {
-            Ok(html) => {
-                // Only cache non-manual browser/validated sessions for reuse.
-                if ctx.manual_cookie_header.is_none() {
-                    cache_validated_session_cookie(&cookies);
-                }
-                self.parse_usage_result(&html)
-            }
-            Err(ProviderError::AuthRequired) if ctx.manual_cookie_header.is_none() => {
-                // Cached/imported session expired — clear and re-import once.
-                invalidate_cached_session_cookie();
-                let fresh = resolve_browser_cookie_header(true)?
-                    .map(OllamaCookieSource::Manual)
-                    .ok_or(ProviderError::AuthRequired)?;
-                let html = fetch_settings_html_at(&client, &fresh, start_url).await?;
-                cache_validated_session_cookie(&fresh);
-                self.parse_usage_result(&html)
-            }
-            Err(err) => Err(err),
-        }
+        let html = fetch_settings_html_at(&client, &cookies, start_url).await?;
+        self.parse_usage_result(&html)
     }
 
     async fn fetch_usage_api(

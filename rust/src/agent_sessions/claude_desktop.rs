@@ -14,6 +14,7 @@
 )]
 
 use super::pi_family::DirectoryScanBudget;
+#[cfg(windows)]
 use crate::browser::claude_desktop::msix_store_dirs;
 use std::collections::HashSet;
 use std::fs;

@@ -384,7 +384,7 @@ codexbar config validate
 
 `set-source` writes the same per-provider usage source as the Settings > Providers source picker. It checks the source against what that provider supports, so `codexbar config set-source codex --source web` fails with `Source web is not supported for codex. Supported sources: auto, cli, oauth.` Upstream also accepts `api`. This port has no separate API source; API-key providers use `oauth` for their token lane.
 
-`claude-code-credentials` controls whether CodexBar may read and refresh Claude Code's own OAuth credentials (`~/.claude/.credentials.json` or Windows Credential Manager). It is the same choice as the desktop setting, and it is off by default. While it is off, Claude Auto falls back to CLI usage, which has less detail. `allow` and `deny` save the choice. `status` only reports it.
+`claude-code-credentials` controls whether CodexBar may read and refresh Claude Code's own OAuth credentials (`~/.claude/.credentials.json`). It is the same choice as the desktop setting, and it is off by default. While it is off, Claude Auto falls back to CLI usage, which has less detail. `allow` and `deny` save the choice. `status` only reports it.
 
 `config preferences import` changes the saved settings. Restart a running CodexBar afterwards.
 

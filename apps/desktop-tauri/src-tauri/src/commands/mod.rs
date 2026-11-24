@@ -32,7 +32,6 @@ mod usage_spend;
 
 mod agent_sessions;
 mod bridge;
-mod browser_import;
 mod claude_accounts;
 pub(crate) mod claude_reconciliation;
 mod claude_swap_usage;
@@ -63,7 +62,6 @@ mod warning_identity;
 
 pub use agent_sessions::*;
 pub(crate) use bridge::*;
-pub use browser_import::*;
 pub use claude_accounts::*;
 pub use claude_swap_usage::*;
 pub use claude_usage::*;

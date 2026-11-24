@@ -1,7 +1,7 @@
 //! z.ai provider implementation
 //!
 //! Fetches usage data from z.ai's quota API
-//! Uses API token stored in Windows Credential Manager
+//! Uses a configured API token
 
 mod balance;
 pub mod region;
@@ -27,9 +27,6 @@ use settings::ZaiSettingsReader;
 const ZAI_USAGE_SCOPE_ENV: &str = "Z_AI_USAGE_SCOPE";
 const ZAI_BIGMODEL_ORG_ENV: &str = "Z_AI_BIGMODEL_ORGANIZATION";
 const ZAI_BIGMODEL_PROJECT_ENV: &str = "Z_AI_BIGMODEL_PROJECT";
-
-/// Windows Credential Manager target for z.ai API token
-const ZAI_CREDENTIAL_TARGET: &str = "codexbar-zai";
 
 /// z.ai quota response structure
 #[derive(Debug, Deserialize)]
@@ -223,7 +220,7 @@ impl ZaiProvider {
         }
     }
 
-    /// Get API token from ctx, Windows Credential Manager, or region-bound env.
+    /// Get API token from ctx, or region-bound env.
     fn get_api_token(
         api_key: Option<&str>,
         region: ZaiRegion,
@@ -234,13 +231,6 @@ impl ZaiProvider {
             && let Some(cleaned) = settings::cleaned(key)
         {
             return Ok(cleaned);
-        }
-
-        // Try Windows Credential Manager
-        if let Ok(entry) = keyring::Entry::new(ZAI_CREDENTIAL_TARGET, "api_token")
-            && let Ok(token) = entry.get_password()
-        {
-            return Ok(token);
         }
 
         let home = dirs::home_dir().unwrap_or_default();

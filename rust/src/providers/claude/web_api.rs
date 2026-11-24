@@ -1,4 +1,4 @@
-//! Claude Web API fetcher - uses browser cookies to fetch usage from claude.ai
+//! Claude Web API fetcher - uses explicitly supplied cookies to fetch usage from claude.ai
 
 use chrono::{DateTime, Utc};
 use reqwest::{Client, StatusCode, header};
@@ -355,7 +355,7 @@ impl ClaudeWebApiFetcher {
         self
     }
 
-    /// Fetch usage using browser cookies or env-var session key
+    /// Fetch usage using a session key provided in the environment.
     pub async fn fetch_with_cookies(&self) -> Result<ProviderFetchResult, ProviderError> {
         if let Some(session_key) = Self::resolve_session_key_from_env() {
             tracing::debug!("Using Claude session key from environment variable");
@@ -363,45 +363,7 @@ impl ClaudeWebApiFetcher {
             return self.fetch_with_cookie_header(&cookie_header).await;
         }
 
-        let domains = [
-            "claude.ai",
-            "claude.com",
-            "console.anthropic.com",
-            "anthropic.com",
-        ];
-
-        // A challenge is a network-path failure, not evidence that a cached
-        // session is invalid. Keep the last validated cookie for the next
-        // refresh and only invalidate it for an ordinary auth response.
-        use crate::browser::cookie_cache::CookieHeaderCache;
-        if let Some(cached) = CookieHeaderCache::load(crate::core::ProviderId::Claude) {
-            match self.fetch_with_cookie_header(&cached.cookie_header).await {
-                Ok(result) => return Ok(result),
-                Err(error) if is_cookie_authentication_failure(&error) => {
-                    CookieHeaderCache::clear(crate::core::ProviderId::Claude);
-                }
-                Err(error) => return Err(error),
-            }
-        }
-
-        // A signed-out browser session moves on to the next browser's session.
-        let mut sessions = crate::providers::unscoped_browser_cookie_sessions(&domains);
-        let mut rejected = None;
-        for cookie_header in sessions.by_ref() {
-            match self.fetch_with_cookie_header(&cookie_header).await {
-                Ok(result) => {
-                    let _stored = CookieHeaderCache::store(
-                        crate::core::ProviderId::Claude,
-                        &cookie_header,
-                        "browser",
-                    );
-                    return Ok(result);
-                }
-                Err(error) if is_cookie_authentication_failure(&error) => rejected = Some(error),
-                Err(error) => return Err(error),
-            }
-        }
-        Err(rejected.unwrap_or_else(|| sessions.exhaustion_error()))
+        Err(ProviderError::NoCookies)
     }
 
     /// Fetch usage with a provided cookie header
@@ -830,10 +792,6 @@ impl Default for ClaudeWebApiFetcher {
     fn default() -> Self {
         Self::new()
     }
-}
-
-fn is_cookie_authentication_failure(error: &ProviderError) -> bool {
-    matches!(error, ProviderError::AuthRequired)
 }
 
 fn cookie_value(cookie_header: &str, name: &str) -> Option<String> {

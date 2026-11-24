@@ -196,7 +196,6 @@ export function baseSettings(overrides: Partial<SettingsSnapshot> = {}): Setting
     claudeSwapEnabled: false,
     claudeSwapExecutablePath: "",
     claudeSwapSource: "claude-swap",
-    claudeDesktopCookiesEnabled: false,
     codexSparkUsageVisible: true,
     codexOpenaiWebExtras: false,
     codexHistoricalTracking: true,

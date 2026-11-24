@@ -10,12 +10,9 @@
 //! - [`code_api`]: Kimi Code API auth/endpoint/CLI-credential policy, plus the
 //!   upstream 0.48.0 monthly-membership enrichment of Code API + CLI usage
 //!   from a signed-in Kimi Desktop session (#2622).
-//! - [`local_storage`]: current `access_token` JWTs from Chromium local storage
 //!   for the selected region, read through the shared LevelDB reader.
-//! - [`desktop_session`]: the current China Kimi Desktop session from its
 //!   Local Storage, revalidated before each request through
 //!   [`credential::KimiWebCredential`] (upstream #4416 / #3536).
-//! - [`desktop_token`]: read-only, WAL-safe reader for the Kimi Desktop
 //!   (Electron) Chromium cookie store, still used for International.
 //! - [`ratio_pool`]: zero-ratio placeholder reconciliation against matching
 //!   legacy counters (upstream 0.63.0).
@@ -27,9 +24,6 @@
 mod auto;
 mod code_api;
 mod credential;
-mod desktop_session;
-pub mod desktop_token;
-mod local_storage;
 #[cfg(test)]
 mod monthly_blocking_tests;
 mod monthly_breakdown;

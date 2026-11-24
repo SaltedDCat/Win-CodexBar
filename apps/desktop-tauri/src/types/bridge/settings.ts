@@ -333,7 +333,6 @@ export interface SettingsSnapshot {
   /** Which tool the executable path names. Absent on older shells. */
   claudeSwapSource?: ClaudeSwapAccountSource;
   /** Claude web usage reads the Claude desktop app session (automatic cookie source only). */
-  claudeDesktopCookiesEnabled?: boolean;
   codexSparkUsageVisible: boolean;
   /** Absent on older shells. */
   codexOpenaiWebExtras?: boolean;
@@ -500,7 +499,6 @@ export interface SettingsUpdate {
   claudeSwapEnabled?: boolean;
   claudeSwapExecutablePath?: string;
   claudeSwapSource?: ClaudeSwapAccountSource;
-  claudeDesktopCookiesEnabled?: boolean;
   codexSparkUsageVisible?: boolean;
   codexOpenaiWebExtras?: boolean;
   codexHistoricalTracking?: boolean;

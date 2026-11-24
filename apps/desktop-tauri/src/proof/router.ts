@@ -70,7 +70,6 @@ export const INERT_ACTIONS = [
   "grok_account_remove",
   "grok_account_save_current",
   "grok_account_switch",
-  "import_browser_cookies",
   "import_preferences",
   "open_path",
   "play_notification_sound",
@@ -337,14 +336,6 @@ export function createProofRouter(
     has_openrouter_management_api_key: () => false,
     has_vercel_access_token: () => false,
     get_manual_cookies: () => [],
-    list_detected_browsers: (args) =>
-      scenario.detectedBrowsers ?? [
-        { browserType: "edge", displayName: "Microsoft Edge", profileCount: 1 },
-        { browserType: "chrome", displayName: "Google Chrome", profileCount: 2 },
-        ...(stringArg(args, "providerId") === "claude"
-          ? [{ browserType: "claude-desktop", displayName: "Claude desktop app", profileCount: 1 }]
-          : []),
-      ],
     get_token_account_providers: () =>
       claudeTokenAccounts ? [tokenAccountSupport("claude")] : [],
     get_token_accounts: (args) => tokenAccounts(stringArg(args, "providerId")),

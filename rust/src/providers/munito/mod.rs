@@ -27,7 +27,6 @@ use crate::core::{
 use crate::providers::{BoundedBodyError, format, read_bounded_response};
 
 const BASE_URL: &str = "https://api.munito.ai/admin/v1";
-const CREDENTIAL_TARGET: &str = "codexbar-munito";
 pub const API_KEY_ENV: &str = "MUNITO_API_KEY";
 const API_KEY_ENV_ALIAS: &str = "MUNITO_ADMIN_KEY";
 const MAX_RESPONSE_BYTES: usize = 256 * 1024;
@@ -173,12 +172,6 @@ fn status_error(status: StatusCode) -> ProviderError {
 /// `MUNITO_ADMIN_KEY` alias.
 fn resolve_key(explicit: Option<&str>) -> Result<String, ProviderError> {
     if let Some(key) = explicit.and_then(cleaned_key) {
-        return Ok(key);
-    }
-    if let Ok(entry) = keyring::Entry::new(CREDENTIAL_TARGET, "api_key")
-        && let Ok(stored) = entry.get_password()
-        && let Some(key) = cleaned_key(&stored)
-    {
         return Ok(key);
     }
     key_from_environment(|name| std::env::var(name).ok())
